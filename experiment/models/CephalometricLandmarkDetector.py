@@ -36,7 +36,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
     ):
         loss = self.step(batch)
 
-        self.log('train_loss', loss)
+        self.log('train_loss', loss, on_step=True, on_epoch=True)
 
         return loss
 
@@ -47,7 +47,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
     ):
         loss = self.step(batch)
 
-        self.log('val_loss', loss, prog_bar=True)
+        self.log('val_loss', loss, prog_bar=True, on_epoch=True)
 
         return loss
 
@@ -61,7 +61,6 @@ class CephalometricLandmarkDetector(L.LightningModule):
         self.log('test_loss', loss, prog_bar=True)
 
         return loss
-
 
     def configure_optimizers(self) -> tuple[Optimizer, LRScheduler]:
         optimizer = Adam(self.parameters(), lr=0.001)
