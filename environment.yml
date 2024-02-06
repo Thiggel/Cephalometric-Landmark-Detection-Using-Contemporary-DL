@@ -1,0 +1,11 @@
+name: cephalometry
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - pytorch
+  - lightning
+  - pandas
+  - torchvision
+  - pillow
+  - tqdm
