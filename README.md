@@ -4,7 +4,7 @@
 
 ```bash
 
-conda env create -f environment.yml pythom=3.12
+conda env create -f environment.yml
 conda activate cephalometry
 
 ```
