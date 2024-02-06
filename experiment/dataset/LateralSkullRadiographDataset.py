@@ -99,15 +99,3 @@ class LateralSkullRadiographDataset(Dataset):
             image = self.transform(image)
 
         return image, points
-
-
-dataset = LateralSkullRadiographDataset(
-    root_dir='../../dataset/',
-    csv_file='all_images_same_points.csv',
-)
-
-# Example usage:
-data_loader = DataLoader(dataset, batch_size=32, shuffle=True)
-for images, points in data_loader:
-    print(images.shape)
-    exit()
