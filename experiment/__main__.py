@@ -1,6 +1,8 @@
+from datetime import date
 import argparse
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
+from lightning.pytorch.loggers import TensorBoardLogger
 
 from dataset import LateralSkullRadiographDataModule
 from models import CephalometricLandmarkDetector
@@ -41,10 +43,16 @@ if __name__ == '__main__':
         mode='min',
     )
 
+    logger = TensorBoardLogger(
+        log_dir='logs/',
+        name=model.model.__class__.__name__ + ' ' + date.today().isoformat(),
+    )
+
     trainer = L.Trainer(
         max_epochs=10_000,
         callbacks=[checkpoint_callback, early_stopping_callback],
-        enable_checkpointing=True
+        enable_checkpointing=True,
+        logger=logger
     )
 
     trainer.fit(model=model, datamodule=datamodule)
