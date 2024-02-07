@@ -4,13 +4,14 @@ import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
 from lightning.pytorch.loggers import TensorBoardLogger
 
-from dataset import LateralSkullRadiographDataModule
-from models import CephalometricLandmarkDetector
+from dataset.LateralSkullRadiographDataModule import LateralSkullRadiographDataModule
+from models.CephalometricLandmarkDetector import CephalometricLandmarkDetector
+from models.ViT import ViT
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--root_dir', type=str, default='../../dataset/')
+    parser.add_argument('--root_dir', type=str, default='dataset')
     parser.add_argument(
         '--csv_file', type=str, default='all_images_same_points.csv'
     )
@@ -28,7 +29,7 @@ if __name__ == '__main__':
     )
 
     model = CephalometricLandmarkDetector(
-        model=L.models.resnet18(pretrained=True),
+        model=ViT()
     )
 
     checkpoint_callback = ModelCheckpoint(
@@ -44,7 +45,7 @@ if __name__ == '__main__':
     )
 
     logger = TensorBoardLogger(
-        log_dir='logs/',
+        'logs/',
         name=model.model.__class__.__name__ + ' ' + date.today().isoformat(),
     )
 

@@ -6,6 +6,7 @@ from torchvision import transforms
 from PIL import Image
 import ast
 from tqdm import tqdm
+from typing import Callable
 
 
 class LateralSkullRadiographDataset(Dataset):
@@ -13,7 +14,7 @@ class LateralSkullRadiographDataset(Dataset):
         self,
         root_dir: str,
         csv_file: str,
-        base_transform: transforms.Compose = transforms.Compose([
+        base_transform: Callable = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
         ]),
@@ -59,6 +60,14 @@ class LateralSkullRadiographDataset(Dataset):
 
         return torch.stack(images), torch.stack(points)
 
+    def _normalize(self, images: torch.Tensor) -> torch.Tensor:
+        normalize = transforms.Normalize(
+            mean=images.mean(),
+            std=images.std()
+        )
+
+        return normalize(images)
+
     def _load_data(self) -> tuple[torch.Tensor, torch.Tensor]:
         if os.path.exists(self._saved_images_path) \
                 and os.path.exists(self._saved_points_path):
@@ -68,6 +77,8 @@ class LateralSkullRadiographDataset(Dataset):
             return images, points
 
         images, points = self._load_dataset()
+
+        images = self._normalize(images)
 
         self._save_to_pickle(images, points)
 

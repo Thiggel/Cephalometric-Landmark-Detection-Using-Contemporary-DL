@@ -36,7 +36,13 @@ class CephalometricLandmarkDetector(L.LightningModule):
     ):
         loss = self.step(batch)
 
-        self.log('train_loss', loss, on_step=True, on_epoch=True)
+        self.log(
+            'train_loss',
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True
+        )
 
         return loss
 
@@ -69,4 +75,8 @@ class CephalometricLandmarkDetector(L.LightningModule):
             patience=self.reduce_lr_patience
         )
 
-        return [optimizer], [scheduler]
+        return {
+            'optimizer': optimizer,
+            'lr_scheduler': scheduler,
+            'monitor': 'val_loss'
+        }

@@ -1,6 +1,7 @@
 name: cephalometry
 channels:
   - defaults
+  - conda-forge
 dependencies:
   - python=3.11
   - pytorch
@@ -10,3 +11,6 @@ dependencies:
   - pillow
   - tqdm
   - tensorboard
+  - matplotlib
+  - timm
+  - transformers
