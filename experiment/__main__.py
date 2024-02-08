@@ -5,6 +5,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
 from lightning.pytorch.loggers import TensorBoardLogger
 import torch
 
+from utils.set_seed import set_seed
 from loggers.ImagePredictionLogger import ImagePredictionLogger
 from dataset.LateralSkullRadiographDataModule import LateralSkullRadiographDataModule
 from models.CephalometricLandmarkDetector import CephalometricLandmarkDetector
@@ -12,6 +13,8 @@ from models.ViT import ViT
 
 
 if __name__ == '__main__':
+    set_seed(42)
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--root_dir', type=str, default='dataset')
     parser.add_argument(
