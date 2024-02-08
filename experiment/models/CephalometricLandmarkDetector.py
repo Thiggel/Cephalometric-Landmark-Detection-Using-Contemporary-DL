@@ -13,14 +13,12 @@ class CephalometricLandmarkDetector(L.LightningModule):
     def __init__(
         self,
         model_name: str,
-        image_size: int = 224,
         reduce_lr_patience: int = 25,
     ):
         super().__init__()
 
         self.save_hyperparameters()
 
-        self.image_size = image_size
         self.reduce_lr_patience = reduce_lr_patience
         self.model = self._init_model(model_name)
 
@@ -50,14 +48,14 @@ class CephalometricLandmarkDetector(L.LightningModule):
     def get_mm_error(
         self,
         non_reduced_loss: torch.Tensor,
-        image_dimensions: torch.Tensor
     ) -> torch.Tensor:
-        print(non_reduced_loss * image_dimensions.unsqueeze(1) / self.image_size)
-        print((non_reduced_loss * image_dimensions.unsqueeze(1) / self.image_size).mean())
-        exit()
+        px_per_m = torch.tensor(7_756)
+        m_to_mm = 1000
+
         return (
-            non_reduced_loss * image_dimensions.unsqueeze(1)
-            / self.image_size
+            non_reduced_loss
+            / px_per_m.unsqueeze(0).unsqueeze(1).unsqueeze(2)
+            * m_to_mm
         ).mean()
 
     def step(
@@ -65,15 +63,14 @@ class CephalometricLandmarkDetector(L.LightningModule):
         batch: tuple[torch.Tensor, torch.Tensor],
         with_mm_error: bool = False
     ):
-        images, points, image_dimensions = batch
+        images, points = batch
 
         predictions = self.model(images)
 
         non_reduced_loss = self.masked_l1_loss(predictions, points)
 
         mm_error = self.get_mm_error(
-            non_reduced_loss,
-            image_dimensions
+            non_reduced_loss
         ) if with_mm_error else None
 
         loss = non_reduced_loss.mean()

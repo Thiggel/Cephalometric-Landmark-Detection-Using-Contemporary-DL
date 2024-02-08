@@ -1,12 +1,7 @@
 import matplotlib.pyplot as plt
-import numpy as np
-from torchvision.utils import make_grid
 import torch
+from torchvision.transforms import Resize
 from lightning import Callback
-import torch.nn.functional as F
-from torchvision.transforms import ToTensor, Compose, Resize
-import io
-from PIL import Image
 
 
 class ImagePredictionLogger(Callback):
@@ -24,7 +19,7 @@ class ImagePredictionLogger(Callback):
         return points
 
     def on_validation_epoch_start(self, trainer, pl_module):
-        images, targets, _ = next(iter(trainer.datamodule.val_dataloader()))
+        images, targets = next(iter(trainer.datamodule.val_dataloader()))
         images = images[:self.num_samples]
 
         preds = pl_module(images)

@@ -7,9 +7,9 @@ import torch
 
 from utils.set_seed import set_seed
 from loggers.ImagePredictionLogger import ImagePredictionLogger
-from dataset.LateralSkullRadiographDataModule import LateralSkullRadiographDataModule
+from dataset.LateralSkullRadiographDataModule import \
+        LateralSkullRadiographDataModule
 from models.CephalometricLandmarkDetector import CephalometricLandmarkDetector
-from models.ViT import ViT
 
 
 def get_args() -> dict:

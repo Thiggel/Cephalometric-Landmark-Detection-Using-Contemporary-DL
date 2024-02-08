@@ -22,16 +22,13 @@ class LateralSkullRadiographDataset(Dataset):
     ):
         self.data_frame = pd.read_csv(
             os.path.join(root_dir, csv_file),
-            converters={
-                'image_dimensions': self._parse_dimensions,
-            },
         )
         self.root_dir = root_dir
         self.base_transform = base_transform
         self.transform = transform
 
         print('Loading dataset into memory...')
-        self.images, self.points, self.image_dimensions = self._load_data()
+        self.images, self.points = self._load_data()
         print('Done!')
 
     def _parse_dimensions(self, x: str) -> tuple[int, int]:
@@ -59,22 +56,15 @@ class LateralSkullRadiographDataset(Dataset):
     def _saved_points_path(self) -> str:
         return os.path.join(self.root_dir, 'points.pt')
 
-    @property
-    def _saved_image_dimensions_path(self) -> str:
-        return os.path.join(self.root_dir, 'image_dimensions.pt')
-
     def _load_dataset(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         images = []
         points = []
-        image_dimensions = torch.tensor(
-            self.data_frame['image_dimensions'].tolist()
-        )
 
         for index in tqdm(range(len(self.data_frame))):
             images.append(self._load_image(index))
             points.append(self._load_points(index))
 
-        return torch.stack(images), torch.stack(points), image_dimensions
+        return torch.stack(images), torch.stack(points)
 
     def _normalize(self, images: torch.Tensor) -> torch.Tensor:
         normalize = transforms.Normalize(
@@ -86,22 +76,20 @@ class LateralSkullRadiographDataset(Dataset):
 
     def _load_data(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if os.path.exists(self._saved_images_path) \
-                and os.path.exists(self._saved_points_path) \
-                and os.path.exists(self._saved_image_dimensions_path):
+                and os.path.exists(self._saved_points_path):
 
             images = torch.load(self._saved_images_path)
             points = torch.load(self._saved_points_path)
-            image_dimensions = torch.load(self._saved_image_dimensions_path)
 
-            return images, points, image_dimensions
+            return images, points
 
-        images, points, image_dimensions = self._load_dataset()
+        images, points = self._load_dataset()
 
         images = self._normalize(images)
 
-        self._save_to_pickle(images, points, image_dimensions)
+        self._save_to_pickle(images, points)
 
-        return images, points, image_dimensions
+        return images, points
 
     def _load_points(self, index: int) -> list[torch.Tensor]:
         points_str = self.data_frame.iloc[index]['points']
@@ -118,11 +106,9 @@ class LateralSkullRadiographDataset(Dataset):
         self,
         images: torch.Tensor,
         points: torch.Tensor,
-        image_dimensions: torch.Tensor
     ):
         torch.save(images, self._saved_images_path)
         torch.save(points, self._saved_points_path)
-        torch.save(image_dimensions, self._saved_image_dimensions_path)
 
     def __len__(self) -> int:
         return len(self.data_frame)
@@ -130,9 +116,8 @@ class LateralSkullRadiographDataset(Dataset):
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         image = self.images[idx]
         points = self.points[idx]
-        image_dimensions = self.image_dimensions[idx]
 
         if self.transform:
             image = self.transform(image)
 
-        return image, points, image_dimensions
+        return image, points
