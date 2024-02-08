@@ -22,14 +22,23 @@ class LateralSkullRadiographDataset(Dataset):
     ):
         self.data_frame = pd.read_csv(
             os.path.join(root_dir, csv_file),
+            converters={
+                'image_dimensions': self._parse_dimensions,
+            },
         )
         self.root_dir = root_dir
         self.base_transform = base_transform
         self.transform = transform
 
         print('Loading dataset into memory...')
-        self.images, self.points = self._load_data()
+        self.images, self.points, self.image_dimensions = self._load_data()
         print('Done!')
+
+    def _parse_dimensions(self, x: str) -> tuple[int, int]:
+        try:
+            return eval(x)
+        except Exception as e:
+            return None
 
     def _load_image(self, index: int) -> torch.Tensor:
         img_name = os.path.join(
@@ -50,15 +59,22 @@ class LateralSkullRadiographDataset(Dataset):
     def _saved_points_path(self) -> str:
         return os.path.join(self.root_dir, 'points.pt')
 
-    def _load_dataset(self) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
+    @property
+    def _saved_image_dimensions_path(self) -> str:
+        return os.path.join(self.root_dir, 'image_dimensions.pt')
+
+    def _load_dataset(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         images = []
         points = []
+        image_dimensions = torch.tensor(
+            self.data_frame['image_dimensions'].tolist()
+        )
 
         for index in tqdm(range(len(self.data_frame))):
             images.append(self._load_image(index))
             points.append(self._load_points(index))
 
-        return torch.stack(images), torch.stack(points)
+        return torch.stack(images), torch.stack(points), image_dimensions
 
     def _normalize(self, images: torch.Tensor) -> torch.Tensor:
         normalize = transforms.Normalize(
@@ -68,21 +84,24 @@ class LateralSkullRadiographDataset(Dataset):
 
         return normalize(images)
 
-    def _load_data(self) -> tuple[torch.Tensor, torch.Tensor]:
+    def _load_data(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if os.path.exists(self._saved_images_path) \
-                and os.path.exists(self._saved_points_path):
+                and os.path.exists(self._saved_points_path) \
+                and os.path.exists(self._saved_image_dimensions_path):
+
             images = torch.load(self._saved_images_path)
             points = torch.load(self._saved_points_path)
+            image_dimensions = torch.load(self._saved_image_dimensions_path)
 
-            return images, points
+            return images, points, image_dimensions
 
-        images, points = self._load_dataset()
+        images, points, image_dimensions = self._load_dataset()
 
         images = self._normalize(images)
 
-        self._save_to_pickle(images, points)
+        self._save_to_pickle(images, points, image_dimensions)
 
-        return images, points
+        return images, points, image_dimensions
 
     def _load_points(self, index: int) -> list[torch.Tensor]:
         points_str = self.data_frame.iloc[index]['points']
@@ -95,9 +114,15 @@ class LateralSkullRadiographDataset(Dataset):
 
         return torch.Tensor(points)
 
-    def _save_to_pickle(self, images: torch.Tensor, points: torch.Tensor):
-        torch.save(images, os.path.join(self.root_dir, 'images.pt'))
-        torch.save(points, os.path.join(self.root_dir, 'points.pt'))
+    def _save_to_pickle(
+        self,
+        images: torch.Tensor,
+        points: torch.Tensor,
+        image_dimensions: torch.Tensor
+    ):
+        torch.save(images, self._saved_images_path)
+        torch.save(points, self._saved_points_path)
+        torch.save(image_dimensions, self._saved_image_dimensions_path)
 
     def __len__(self) -> int:
         return len(self.data_frame)
@@ -105,8 +130,9 @@ class LateralSkullRadiographDataset(Dataset):
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         image = self.images[idx]
         points = self.points[idx]
+        image_dimensions = self.image_dimensions[idx]
 
         if self.transform:
             image = self.transform(image)
 
-        return image, points
+        return image, points, image_dimensions

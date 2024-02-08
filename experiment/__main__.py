@@ -12,19 +12,27 @@ from models.CephalometricLandmarkDetector import CephalometricLandmarkDetector
 from models.ViT import ViT
 
 
-if __name__ == '__main__':
-    set_seed(42)
-
+def get_args() -> dict:
     parser = argparse.ArgumentParser()
     parser.add_argument('--root_dir', type=str, default='dataset')
     parser.add_argument(
-        '--csv_file', type=str, default='all_images_same_points.csv'
+        '--csv_file', type=str, default='all_images_same_points_dimensions.csv'
     )
     parser.add_argument('--splits', type=tuple, default=(0.8, 0.1, 0.1))
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--early_stopping_patience', type=int, default=100)
+    parser.add_argument('--checkpoint', type=str, default=None)
+    parser.add_argument('--test_only', action=argparse.BooleanOptionalAction)
 
     args = parser.parse_args()
+
+    return args
+
+
+if __name__ == '__main__':
+    set_seed(42)
+
+    args = get_args()
 
     datamodule = LateralSkullRadiographDataModule(
         root_dir=args.root_dir,
@@ -34,7 +42,7 @@ if __name__ == '__main__':
     )
 
     model = CephalometricLandmarkDetector(
-        model=ViT()
+        model_name='ViT',
     )
 
     checkpoint_callback = ModelCheckpoint(
@@ -65,10 +73,18 @@ if __name__ == '__main__':
         devices='auto'
     )
 
-    trainer.fit(model=model, datamodule=datamodule)
+    if args.checkpoint:
+        print(f'Loading checkpoint {args.checkpoint}...')
+        model = CephalometricLandmarkDetector.load_from_checkpoint(
+            args.checkpoint
+        )
+        print('Done!')
 
-    model = CephalometricLandmarkDetector.load_from_checkpoint(
-        trainer.checkpoint_callback.best_model_path
-    )
+    if not args.test_only:
+        trainer.fit(model=model, datamodule=datamodule)
+
+        model = CephalometricLandmarkDetector.load_from_checkpoint(
+            trainer.checkpoint_callback.best_model_path
+        )
 
     trainer.test(model=model, datamodule=datamodule)
