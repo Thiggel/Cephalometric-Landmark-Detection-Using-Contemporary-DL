@@ -3,7 +3,9 @@ import argparse
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
 from lightning.pytorch.loggers import TensorBoardLogger
+import torch
 
+from loggers.ImagePredictionLogger import ImagePredictionLogger
 from dataset.LateralSkullRadiographDataModule import LateralSkullRadiographDataModule
 from models.CephalometricLandmarkDetector import CephalometricLandmarkDetector
 from models.ViT import ViT
@@ -44,16 +46,20 @@ if __name__ == '__main__':
         mode='min',
     )
 
-    logger = TensorBoardLogger(
+    tensorboard_logger = TensorBoardLogger(
         'logs/',
         name=model.model.__class__.__name__ + ' ' + date.today().isoformat(),
     )
 
+    image_logger = ImagePredictionLogger(num_samples=5)
+
     trainer = L.Trainer(
         max_epochs=10_000,
-        callbacks=[checkpoint_callback, early_stopping_callback],
+        callbacks=[checkpoint_callback, early_stopping_callback, image_logger],
         enable_checkpointing=True,
-        logger=logger
+        logger=tensorboard_logger,
+        accelerator='gpu' if torch.cuda.is_available() else 'cpu',
+        devices='auto'
     )
 
     trainer.fit(model=model, datamodule=datamodule)

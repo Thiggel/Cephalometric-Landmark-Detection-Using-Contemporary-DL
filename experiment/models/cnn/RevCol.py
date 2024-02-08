@@ -62,8 +62,6 @@ class RevCol(nn.Module):
                 path
             )
 
-        print(torch.load(path))
-
         model.load_state_dict(torch.load(path))
 
     def _get_model(self, model_name: str) -> FullNet:

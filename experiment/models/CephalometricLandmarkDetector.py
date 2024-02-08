@@ -20,12 +20,21 @@ class CephalometricLandmarkDetector(L.LightningModule):
     def forward(self, x):
         return self.model(x)
 
+    def masked_l1_loss(self, predictions: torch.Tensor, targets: torch.Tensor):
+        mask = targets > 0
+        masked_predictions = torch.masked_select(predictions, mask)
+        masked_targets = torch.masked_select(targets, mask)
+
+        loss = F.l1_loss(masked_predictions, masked_targets)
+
+        return loss
+
     def step(self, batch: tuple[torch.Tensor, torch.Tensor]):
         images, points = batch
 
         predictions = self.model(images)
 
-        loss = F.l1_loss(predictions, points)
+        loss = self.masked_l1_loss(predictions, points)
 
         return loss
 

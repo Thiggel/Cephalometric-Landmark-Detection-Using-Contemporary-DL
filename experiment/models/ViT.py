@@ -4,7 +4,7 @@ from transformers import ViTModel, ViTConfig
 
 
 class ViT(nn.Module):
-    def __init__(self, model_type: str = 'tiny', output_size: int = 37): 
+    def __init__(self, model_type: str = 'tiny', output_size: int = 44): 
         super().__init__()
 
         self.model, self.config = self._load_model(model_type)
