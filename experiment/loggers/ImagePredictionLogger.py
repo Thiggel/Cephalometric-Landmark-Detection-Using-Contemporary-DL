@@ -8,7 +8,11 @@ class ImagePredictionLogger(Callback):
     def __init__(self, num_samples):
         super().__init__()
         self.num_samples = num_samples
-        self.image_size = (1840, 1360)
+        self.image_downscaling = 4
+        self.image_size = (
+            1840 // self.image_downscaling,
+            1360 // self.image_downscaling
+        )
         self.resize = Resize(self.image_size)
 
     def _clamp_points(self, points: torch.Tensor):
@@ -23,9 +27,9 @@ class ImagePredictionLogger(Callback):
         images = images[:self.num_samples]
 
         preds = pl_module(images)
-        preds = self._clamp_points(preds)
 
-        targets = self._clamp_points(targets)
+        preds = self._clamp_points(preds / self.image_downscaling)
+        targets = self._clamp_points(targets / self.image_downscaling)
 
         images = self.resize(images).permute(0, 2, 3, 1).cpu().numpy()
 
