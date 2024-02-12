@@ -7,6 +7,8 @@ from PIL import Image
 import ast
 from tqdm import tqdm
 from typing import Callable
+from albumentations.augmentations.transforms import \
+        GaussNoise
 
 
 class LateralSkullRadiographDataset(Dataset):
@@ -15,10 +17,17 @@ class LateralSkullRadiographDataset(Dataset):
         root_dir: str,
         csv_file: str,
         base_transform: Callable = transforms.Compose([
-            transforms.Resize((224, 224)),
+            transforms.Resize((450, 450)),
             transforms.ToTensor(),
         ]),
-        transform: transforms.Compose = None
+        transform: transforms.Compose = transforms.Compose([
+            transforms.ColorJitter(
+                brightness=0.5,
+                contrast=0.5,
+                saturation=0.5
+            ),
+            GaussNoise(var_limit=0.2, mean=0, p=0.5),
+        ]),
     ):
         self.data_frame = pd.read_csv(
             os.path.join(root_dir, csv_file),
@@ -28,13 +37,13 @@ class LateralSkullRadiographDataset(Dataset):
         self.transform = transform
 
         print('Loading dataset into memory...')
-        self.images, self.points = self._load_data()
+        self.images, self.points, self.point_ids = self._load_data()
         print('Done!')
 
     def _parse_dimensions(self, x: str) -> tuple[int, int]:
         try:
             return eval(x)
-        except Exception as e:
+        except Exception:
             return None
 
     def _load_image(self, index: int) -> torch.Tensor:
@@ -75,13 +84,15 @@ class LateralSkullRadiographDataset(Dataset):
         return normalize(images)
 
     def _load_data(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        point_ids = self._load_point_ids()
+
         if os.path.exists(self._saved_images_path) \
                 and os.path.exists(self._saved_points_path):
 
             images = torch.load(self._saved_images_path)
             points = torch.load(self._saved_points_path)
 
-            return images, points
+            return images, points, point_ids
 
         images, points = self._load_dataset()
 
@@ -89,7 +100,15 @@ class LateralSkullRadiographDataset(Dataset):
 
         self._save_to_pickle(images, points)
 
-        return images, points
+        return images, points, point_ids
+
+    def _load_point_ids(self) -> list[str]:
+        points_str = self.data_frame.iloc[0]['points']
+        points_dict = ast.literal_eval(points_str)
+
+        ids = [key for key in points_dict]
+
+        return ids
 
     def _load_points(self, index: int) -> list[torch.Tensor]:
         points_str = self.data_frame.iloc[index]['points']
@@ -100,7 +119,7 @@ class LateralSkullRadiographDataset(Dataset):
             for key in points_dict
         ]
 
-        return torch.Tensor(points)
+        return torch.Tensor(points), point_ids
 
     def _save_to_pickle(
         self,
@@ -117,7 +136,7 @@ class LateralSkullRadiographDataset(Dataset):
         image = self.images[idx]
         points = self.points[idx]
 
-        if self.transform:
+        if self.transform is not None:
             image = self.transform(image)
 
         return image, points

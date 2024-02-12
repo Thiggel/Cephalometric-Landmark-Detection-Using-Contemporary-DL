@@ -43,6 +43,7 @@ if __name__ == '__main__':
 
     model = CephalometricLandmarkDetector(
         model_name='ViT',
+        point_ids=datamodule.dataset.point_ids
     )
 
     checkpoint_callback = ModelCheckpoint(

@@ -3,10 +3,27 @@ from torch import nn
 from transformers import ViTModel, ViTConfig
 
 
+class Downscaling(nn.Sequential):
+    def __init__(self):
+        super().__init__(
+            # input shape: 450, 450, 1
+            nn.Conv2d(
+                in_channels=1,
+                out_channels=3,
+                kernel_size=3,
+            ),
+            nn.MaxPool2d(2),
+            nn.BatchNorm2d(3),
+            nn.ReLU(),
+            # output shape: 224, 224, 3
+        )
+
+
 class ViT(nn.Module):
-    def __init__(self, model_type: str = 'tiny', output_size: int = 44): 
+    def __init__(self, model_type: str = 'tiny', output_size: int = 44):
         super().__init__()
 
+        self.downscaling = Downscaling()
         self.model, self.config = self._load_model(model_type)
         self.head = nn.Linear(self.config.hidden_size, 2 * output_size)
         self.output_size = output_size
@@ -26,7 +43,7 @@ class ViT(nn.Module):
         return model, config
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
-        images = images.repeat(1, 3, 1, 1)
+        images = self.downscaling(images)
         output = self.model(images).last_hidden_state[:, 0, :]
         output = self.head(output).reshape(-1, self.output_size, 2)
 

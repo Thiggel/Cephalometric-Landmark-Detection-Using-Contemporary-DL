@@ -7,25 +7,31 @@ import torch.nn.functional as F
 from typing import Callable
 
 from models.ViT import ViT
+from models.cnn.ConvNextV2Model import ConvNextV2Model
 
 
 class CephalometricLandmarkDetector(L.LightningModule):
     def __init__(
         self,
         model_name: str,
+        point_ids: list[str],
         reduce_lr_patience: int = 25,
+        model_type: str = 'tiny',
     ):
         super().__init__()
 
         self.save_hyperparameters()
 
+        self.model_type = model_type
         self.reduce_lr_patience = reduce_lr_patience
         self.model = self._init_model(model_name)
+        self.point_ids = point_ids
 
     @property
     def available_models(self) -> dict[str, Callable]:
         return {
-            'ViT': lambda: ViT()
+            'ViT': lambda: ViT(model_type=self.model_type),
+            'ConvNextV2': lambda: ConvNextV2Model(model_type=self.model_type),
         }
 
     def _init_model(self, model_name: str) -> nn.Module:
@@ -38,12 +44,13 @@ class CephalometricLandmarkDetector(L.LightningModule):
     def forward(self, x):
         return self.model(x)
 
-    def masked_l1_loss(self, predictions: torch.Tensor, targets: torch.Tensor):
-        mask = targets > 0
-        masked_predictions = predictions * mask
-        masked_targets = targets * mask
+    def masked_l2_loss(self, predictions: torch.Tensor, targets: torch.Tensor):
+        l2_loss = ((predictions - targets) ** 2).sum(-1).sqrt()
 
-        return F.l1_loss(masked_predictions, masked_targets, reduction='none')
+        mask = (targets > 0).prod(-1)
+        masked_l2_loss = l2_loss * mask
+
+        return masked_l2_loss
 
     def get_mm_error(
         self,
@@ -56,7 +63,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
             non_reduced_loss
             / px_per_m.unsqueeze(0).unsqueeze(1).unsqueeze(2)
             * m_to_mm
-        ).mean()
+        ).mean(0)
 
     def step(
         self,
@@ -67,7 +74,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
 
         predictions = self.model(images)
 
-        non_reduced_loss = self.masked_l1_loss(predictions, points)
+        non_reduced_loss = self.masked_l2_loss(predictions, points)
 
         mm_error = self.get_mm_error(
             non_reduced_loss
@@ -101,6 +108,8 @@ class CephalometricLandmarkDetector(L.LightningModule):
     ):
         loss, mm_error = self.step(batch, with_mm_error=True)
 
+        mm_error = mm_error.mean()
+
         self.log('val_loss', loss, prog_bar=True, on_epoch=True)
         self.log('val_mm_error', mm_error, prog_bar=True, on_epoch=True)
 
@@ -112,6 +121,13 @@ class CephalometricLandmarkDetector(L.LightningModule):
         batch_idx: int
     ):
         loss, mm_error = self.step(batch, with_mm_error=True)
+
+        print(mm_error.shape)
+
+        for (id, point_id) in enumerate(self.point_ids):
+            self.log(f'{point_id}_mm_error', mm_error[id].mean())
+
+        mm_error = mm_error.mean()
 
         self.log('test_loss', loss, prog_bar=True)
         self.log('test_mm_error', mm_error, prog_bar=True)

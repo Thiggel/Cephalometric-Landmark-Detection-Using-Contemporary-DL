@@ -3,14 +3,4 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  - python=3.11
-  - pytorch
-  - lightning
-  - pandas
-  - torchvision
-  - pillow
-  - tqdm
-  - tensorboard
-  - matplotlib
-  - timm
-  - transformers
+  - python=3.9

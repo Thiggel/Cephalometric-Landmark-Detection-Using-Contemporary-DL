@@ -1,0 +1,11 @@
+torch
+lightning
+pandas
+torchvision
+pillow
+tqdm
+tensorboard
+matplotlib
+timm
+transformers
+albumentations
