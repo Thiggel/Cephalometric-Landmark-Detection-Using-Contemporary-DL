@@ -3,11 +3,10 @@ import torch
 from torch import nn
 from torch.optim import Adam, Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau, LRScheduler
-import torch.nn.functional as F
 from typing import Callable
 
 from models.ViT import ViT
-from models.cnn.ConvNextV2Model import ConvNextV2Model
+from models.cnn.ConvNextV2 import ConvNextV2
 
 
 class CephalometricLandmarkDetector(L.LightningModule):
@@ -31,7 +30,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
     def available_models(self) -> dict[str, Callable]:
         return {
             'ViT': lambda: ViT(model_type=self.model_type),
-            'ConvNextV2': lambda: ConvNextV2Model(model_type=self.model_type),
+            'ConvNextV2': lambda: ConvNextV2(model_type=self.model_type),
         }
 
     def _init_model(self, model_name: str) -> nn.Module:
