@@ -22,6 +22,9 @@ def get_args() -> dict:
     parser.add_argument(
         '--model_name', type=str, default='ViT', choices=['ViT', 'ConvNextV2']
     )
+    parser.add_argument(
+        '--model_size', type=str, default='tiny', choices=['tiny', 'normal']
+    )
     parser.add_argument('--splits', type=tuple, default=(0.8, 0.1, 0.1))
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--early_stopping_patience', type=int, default=100)
@@ -46,7 +49,8 @@ def run(args: dict, seed: int = 42) -> dict:
 
     model = CephalometricLandmarkDetector(
         model_name=args.model_name,
-        point_ids=datamodule.dataset.point_ids
+        point_ids=datamodule.dataset.point_ids,
+        model_type=args.model_size,
     )
 
     checkpoint_callback = ModelCheckpoint(
@@ -68,7 +72,7 @@ def run(args: dict, seed: int = 42) -> dict:
 
     image_logger = ImagePredictionLogger(num_samples=5)
 
-    profiler = PyTorchProfiler(dirpath=".", filename="perf_logs")
+    profiler = PyTorchProfiler(dirpath="./perf_logs", filename="perf_logs")
 
     trainer = L.Trainer(
         max_epochs=10_000,
