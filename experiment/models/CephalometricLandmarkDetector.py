@@ -62,7 +62,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
             non_reduced_loss
             / px_per_m.unsqueeze(0).unsqueeze(1).unsqueeze(2)
             * m_to_mm
-        ).mean(0)
+        ).squeeze().mean(0)
 
     def step(
         self,
@@ -120,8 +120,6 @@ class CephalometricLandmarkDetector(L.LightningModule):
         batch_idx: int
     ):
         loss, mm_error = self.step(batch, with_mm_error=True)
-
-        print(mm_error.shape)
 
         for (id, point_id) in enumerate(self.point_ids):
             self.log(f'{point_id}_mm_error', mm_error[id].mean())
