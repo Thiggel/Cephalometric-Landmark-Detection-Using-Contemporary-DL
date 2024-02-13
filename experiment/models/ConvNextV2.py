@@ -3,7 +3,7 @@ from torch import nn
 from typing import Callable
 from transformers import ConvNextV2Model
 
-from ..ViT import Downscaling
+from models.ViT import Downscaling
 
 
 class ConvNextV2(nn.Module):

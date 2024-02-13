@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, LRScheduler
 from typing import Callable
 
 from models.ViT import ViT
-from models.cnn.ConvNextV2 import ConvNextV2
+from models.ConvNextV2 import ConvNextV2
 
 
 class CephalometricLandmarkDetector(L.LightningModule):

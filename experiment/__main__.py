@@ -18,6 +18,9 @@ def get_args() -> dict:
     parser.add_argument(
         '--csv_file', type=str, default='all_images_same_points_dimensions.csv'
     )
+    parser.add_argument(
+        '--model_name', type=str, default='ViT', choices=['ViT', 'ConvNextV2']
+    )
     parser.add_argument('--splits', type=tuple, default=(0.8, 0.1, 0.1))
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--early_stopping_patience', type=int, default=100)
@@ -42,7 +45,7 @@ if __name__ == '__main__':
     )
 
     model = CephalometricLandmarkDetector(
-        model_name='ConvNextV2',
+        model_name=args.model_name,
         point_ids=datamodule.dataset.point_ids
     )
 
