@@ -3,10 +3,8 @@ import torch
 from torch import nn
 from torch.optim import Adam, Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau, LRScheduler
-from typing import Callable
 
-from models.ViT import ViT
-from models.ConvNextV2 import ConvNextV2
+from models.ModelTypes import ModelTypes
 
 
 class CephalometricLandmarkDetector(L.LightningModule):
@@ -15,30 +13,21 @@ class CephalometricLandmarkDetector(L.LightningModule):
         model_name: str,
         point_ids: list[str],
         reduce_lr_patience: int = 25,
-        model_type: str = 'tiny',
+        model_size: str = 'tiny',
     ):
         super().__init__()
 
         self.save_hyperparameters()
 
-        self.model_type = model_type
+        self.model_size = model_size
         self.reduce_lr_patience = reduce_lr_patience
         self.model = self._init_model(model_name)
         self.point_ids = point_ids
 
-    @property
-    def available_models(self) -> dict[str, Callable]:
-        return {
-            'ViT': lambda: ViT(model_type=self.model_type),
-            'ConvNextV2': lambda: ConvNextV2(model_type=self.model_type),
-        }
-
     def _init_model(self, model_name: str) -> nn.Module:
-        if model_name not in self.available_models:
-            print('Invalid Model')
-            exit()
+        model_type = ModelTypes.get_model_type(model_name)
 
-        return self.available_models[model_name]()
+        return model_type.initialize(self.model_size)
 
     def forward(self, x):
         return self.model(x)

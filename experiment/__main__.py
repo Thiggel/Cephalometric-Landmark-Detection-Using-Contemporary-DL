@@ -11,6 +11,7 @@ from loggers.ImagePredictionLogger import ImagePredictionLogger
 from dataset.LateralSkullRadiographDataModule import \
         LateralSkullRadiographDataModule
 from models.CephalometricLandmarkDetector import CephalometricLandmarkDetector
+from models.ModelTypes import ModelTypes
 
 
 def get_args() -> dict:
@@ -20,7 +21,10 @@ def get_args() -> dict:
         '--csv_file', type=str, default='all_images_same_points_dimensions.csv'
     )
     parser.add_argument(
-        '--model_name', type=str, default='ViT', choices=['ViT', 'ConvNextV2']
+        '--model_name',
+        type=str,
+        default=ModelTypes.ViT.name,
+        choices=ModelTypes.get_model_types()
     )
     parser.add_argument(
         '--model_size', type=str, default='tiny', choices=['tiny', 'normal']
@@ -44,13 +48,14 @@ def run(args: dict, seed: int = 42) -> dict:
         root_dir=args.root_dir,
         csv_file=args.csv_file,
         splits=args.splits,
-        batch_size=args.batch_size
+        batch_size=args.batch_size,
+        resize_to=ModelTypes.get_model_type(args.model_name).resize_to,
     )
 
     model = CephalometricLandmarkDetector(
         model_name=args.model_name,
         point_ids=datamodule.dataset.point_ids,
-        model_type=args.model_size,
+        model_size=args.model_size,
     )
 
     checkpoint_callback = ModelCheckpoint(

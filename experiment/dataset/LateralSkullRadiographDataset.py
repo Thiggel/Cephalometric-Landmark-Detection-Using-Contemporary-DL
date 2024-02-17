@@ -16,10 +16,7 @@ class LateralSkullRadiographDataset(Dataset):
         self,
         root_dir: str,
         csv_file: str,
-        base_transform: Callable = transforms.Compose([
-            transforms.Resize((450, 450)),
-            transforms.ToTensor(),
-        ]),
+        resize_to: tuple[int, int] = (450, 450),
         transform: transforms.Compose = transforms.Compose([
             transforms.ColorJitter(
                 brightness=0.5,
@@ -33,7 +30,11 @@ class LateralSkullRadiographDataset(Dataset):
             os.path.join(root_dir, csv_file),
         )
         self.root_dir = root_dir
-        self.base_transform = base_transform
+        self.base_transform = transforms.Compose([
+            transforms.Resize(resize_to),
+            transforms.ToTensor(),
+        ])
+        self.resize_to = resize_to
         self.transform = transform
 
         print('Loading dataset into memory...')
@@ -59,7 +60,7 @@ class LateralSkullRadiographDataset(Dataset):
 
     @property
     def _saved_images_path(self) -> str:
-        return os.path.join(self.root_dir, 'images.pt')
+        return os.path.join(self.root_dir, f'images_{self.resize_to}.pt')
 
     @property
     def _saved_points_path(self) -> str:
@@ -119,7 +120,7 @@ class LateralSkullRadiographDataset(Dataset):
             for key in points_dict
         ]
 
-        return torch.Tensor(points), point_ids
+        return torch.Tensor(points)
 
     def _save_to_pickle(
         self,
