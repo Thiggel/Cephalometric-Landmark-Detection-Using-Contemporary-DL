@@ -1,0 +1,54 @@
+TEST Profiler Report
+Profile stats for: records
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                          ProfilerStep*         0.46%       8.985ms       100.00%        1.965s     654.940ms             3  
+[pl][profile][Strategy]SingleDeviceStrategy.test_ste...        19.84%     389.804ms        95.46%        1.876s     625.196ms             3  
+                                           aten::linear         0.10%       2.011ms        31.57%     620.283ms       2.794ms           222  
+                                            aten::addmm        25.86%     508.192ms        31.37%     616.368ms       2.776ms           222  
+                                           aten::conv2d         0.00%      20.000us        11.70%     229.916ms      38.319ms             6  
+                                      aten::convolution         0.00%      20.000us        11.70%     229.896ms      38.316ms             6  
+                                     aten::_convolution         0.00%      60.000us        11.70%     229.876ms      38.313ms             6  
+                               aten::mkldnn_convolution        10.72%     210.691ms        11.70%     229.816ms      38.303ms             6  
+                                           aten::matmul         0.08%       1.616ms        10.78%     211.767ms       2.941ms            72  
+                                            aten::copy_         9.01%     177.075ms         9.01%     177.075ms     212.320us           834  
+                                              aten::bmm         5.84%     114.771ms         5.84%     114.771ms       1.594ms            72  
+                                            aten::clone         0.13%       2.543ms         5.43%     106.762ms     378.589us           282  
+                                          aten::reshape        -0.16%   -3048.000us         4.85%      95.359ms     262.697us           363  
+                                       aten::max_pool2d         0.41%       7.994ms         4.34%      85.269ms      28.423ms             3  
+                                            aten::empty         0.13%       2.578ms         4.11%      80.695ms     200.734us           402  
+                                             aten::gelu         4.09%      80.381ms         4.09%      80.381ms       2.233ms            36  
+                                            aten::fill_         4.04%      79.361ms         4.04%      79.361ms      78.034us          1017  
+               [pl][profile][_EvaluationLoop].test_next         0.01%     179.000us         4.00%      78.539ms      26.180ms             3  
+                                              aten::cat         3.99%      78.344ms         3.99%      78.380ms       8.709ms             9  
+enumerate(DataLoader)#_SingleProcessDataLoaderIter._...         0.04%     767.000us         3.99%      78.360ms      26.120ms             3  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 1.965s
+TEST Profiler Report
+Profile stats for: records
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                          ProfilerStep*         0.51%      10.173ms       100.00%        2.007s     668.931ms             3  
+[pl][profile][Strategy]SingleDeviceStrategy.test_ste...        20.05%     402.313ms        98.52%        1.977s     659.064ms             3  
+                                           aten::linear         0.11%       2.248ms        32.71%     656.437ms       2.957ms           222  
+                                            aten::addmm        27.00%     541.749ms        32.50%     652.137ms       2.938ms           222  
+                                           aten::conv2d         0.00%      35.000us        12.56%     252.118ms      42.020ms             6  
+                                      aten::convolution         0.00%      20.000us        12.56%     252.083ms      42.014ms             6  
+                                     aten::_convolution         0.00%      62.000us        12.56%     252.063ms      42.011ms             6  
+                               aten::mkldnn_convolution        11.61%     232.934ms        12.56%     252.001ms      42.000ms             6  
+                                           aten::matmul         0.08%       1.679ms        11.06%     221.901ms       3.082ms            72  
+                                            aten::copy_         9.05%     181.621ms         9.05%     181.621ms     217.771us           834  
+                                              aten::bmm         6.08%     122.018ms         6.08%     122.018ms       1.695ms            72  
+                                            aten::clone         0.11%       2.231ms         5.53%     111.018ms     393.681us           282  
+                                          aten::reshape        -0.01%    -118.000us         4.89%      98.154ms     270.397us           363  
+                                       aten::max_pool2d         0.40%       8.011ms         4.44%      89.014ms      29.671ms             3  
+                                            aten::empty         0.09%       1.883ms         4.16%      83.445ms     207.575us           402  
+                                             aten::gelu         4.14%      83.146ms         4.14%      83.146ms       2.310ms            36  
+                                            aten::fill_         4.09%      82.007ms         4.09%      82.007ms      80.636us          1017  
+                          aten::max_pool2d_with_indices         4.04%      81.003ms         4.04%      81.003ms      27.001ms             3  
+                                          aten::softmax         0.01%     114.000us         3.50%      70.284ms       1.952ms            36  
+                                         aten::_softmax         3.50%      70.170ms         3.50%      70.170ms       1.949ms            36  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 2.007s

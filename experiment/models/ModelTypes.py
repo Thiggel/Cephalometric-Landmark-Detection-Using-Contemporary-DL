@@ -1,18 +1,19 @@
 from dataclasses import dataclass
-from typing import Callable
 from enum import Enum
 import torch.nn as nn
 
-from models.ConvNextV2 import ConvNextV2
-from models.ViT import ViT
-from models.baselines.yao import LandmarkDetection
+from models.CephalometricLandmarkDetector import CephalometricLandmarkDetector
+from models.baselines.yao import YaoLandmarkDetection
 
 
 @dataclass
 class ModelType:
     name: str
     resize_to: tuple[int, int]
-    initialize: Callable[[str], nn.Module]
+    model: nn.Module
+
+    def initialize(self, *args, **kwargs) -> nn.Module:
+        return self.model(*args, **kwargs)
 
 
 class ModelTypes(Enum):
@@ -24,19 +25,19 @@ class ModelTypes(Enum):
     def model_types():
         return {
             ModelTypes.ViT: ModelType(
-                'ViT',
-                (450, 450),
-                lambda model_type: ViT(model_type=model_type)
+                name='ViT',
+                resize_to=(450, 450),
+                model=CephalometricLandmarkDetector
             ),
             ModelTypes.ConvNextV2: ModelType(
-                'ConvNextV2',
-                (450, 450),
-                lambda model_type: ConvNextV2(model_type=model_type)
+                name='ConvNextV2',
+                resize_to=(450, 450),
+                model=CephalometricLandmarkDetector
             ),
             ModelTypes.Yao: ModelType(
-                'Yao',
-                (576, 512),
-                lambda _: LandmarkDetection()
+                name='Yao',
+                resize_to=(576, 512),
+                model=YaoLandmarkDetection
             ),
         }
 

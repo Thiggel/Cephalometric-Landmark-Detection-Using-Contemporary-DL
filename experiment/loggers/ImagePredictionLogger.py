@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import torch
-from torchvision.transforms import Resize
 from lightning import Callback
 
 
@@ -8,17 +7,17 @@ class ImagePredictionLogger(Callback):
     def __init__(self, num_samples):
         super().__init__()
         self.num_samples = num_samples
-        self.image_downscaling = 4
-        self.image_size = (
-            1840 // self.image_downscaling,
-            1360 // self.image_downscaling
-        )
-        self.resize = Resize(self.image_size)
 
-    def _clamp_points(self, points: torch.Tensor):
+    def _clamp_points(
+        self,
+        points: torch.Tensor,
+        images: torch.Tensor
+    ) -> torch.Tensor:
+        image_height, image_width = images.shape[-1], images.shape[-2]
+
         points = torch.clamp(points, min=0)
-        points[..., 0] = torch.clamp(points[..., 0], max=self.image_size[0])
-        points[..., 1] = torch.clamp(points[..., 1], max=self.image_size[1])
+        points[..., 0] = torch.clamp(points[..., 0], max=image_width)
+        points[..., 1] = torch.clamp(points[..., 1], max=image_height)
 
         return points
 
@@ -28,10 +27,10 @@ class ImagePredictionLogger(Callback):
 
         preds = pl_module(images)
 
-        preds = self._clamp_points(preds / self.image_downscaling)
-        targets = self._clamp_points(targets / self.image_downscaling)
+        preds = self._clamp_points(preds, images)
+        targets = self._clamp_points(targets, images)
 
-        images = self.resize(images).permute(0, 2, 3, 1).cpu().numpy()
+        images = images.permute(0, 2, 3, 1).cpu().numpy()
 
         fig, axs = plt.subplots(
             nrows=1,

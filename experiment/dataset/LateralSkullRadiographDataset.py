@@ -25,17 +25,18 @@ class LateralSkullRadiographDataset(Dataset):
             ),
             GaussNoise(var_limit=0.2, mean=0, p=0.5),
         ]),
+        original_image_size: tuple[int, int] = (1840, 1360),
     ):
         self.data_frame = pd.read_csv(
             os.path.join(root_dir, csv_file),
         )
         self.root_dir = root_dir
-        self.base_transform = transforms.Compose([
-            transforms.Resize(resize_to),
-            transforms.ToTensor(),
-        ])
+        self.resize = transforms.Resize(resize_to)
+        self.to_tensor = transforms.ToTensor()
         self.resize_to = resize_to
         self.transform = transform
+
+        self.original_image_size = original_image_size
 
         print('Loading dataset into memory...')
         self.images, self.points, self.point_ids = self._load_data()
@@ -47,14 +48,18 @@ class LateralSkullRadiographDataset(Dataset):
         except Exception:
             return None
 
-    def _load_image(self, index: int) -> torch.Tensor:
+    def _load_image(self, index: int, resize=True) -> torch.Tensor:
         img_name = os.path.join(
             self.root_dir,
             f"images/{self.data_frame.iloc[index]['document']}.png"
         )
 
         image = Image.open(img_name).convert('L')
-        image = self.base_transform(image)
+
+        if resize:
+            image = self.resize(image)
+
+        image = self.to_tensor(image)
 
         return image
 
@@ -64,7 +69,7 @@ class LateralSkullRadiographDataset(Dataset):
 
     @property
     def _saved_points_path(self) -> str:
-        return os.path.join(self.root_dir, 'points.pt')
+        return os.path.join(self.root_dir, f'points_{self.resize_to}.pt')
 
     def _load_dataset(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         images = []
@@ -111,12 +116,23 @@ class LateralSkullRadiographDataset(Dataset):
 
         return ids
 
-    def _load_points(self, index: int) -> list[torch.Tensor]:
+    def _resize_point(self, point: dict[str, float]) -> dict[str, float]:
+        x_ratio = self.resize_to[1] / self.original_image_size[1]
+        y_ratio = self.resize_to[0] / self.original_image_size[0]
+
+        return [
+            point['x'] * x_ratio,
+            point['y'] * y_ratio,
+        ]
+
+    def _load_points(self, index: int, resize=True) -> list[torch.Tensor]:
         points_str = self.data_frame.iloc[index]['points']
         points_dict = ast.literal_eval(points_str)
 
         points = [
-            [points_dict[key]['x'], points_dict[key]['y']]
+            self._resize_point(points_dict[key])
+            if resize
+            else [points_dict[key]['x'], points_dict[key]['y']]
             for key in points_dict
         ]
 

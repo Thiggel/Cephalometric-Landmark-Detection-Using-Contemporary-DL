@@ -12,6 +12,7 @@ from dataset.LateralSkullRadiographDataModule import \
         LateralSkullRadiographDataModule
 from models.CephalometricLandmarkDetector import CephalometricLandmarkDetector
 from models.ModelTypes import ModelTypes
+from models.baselines.yao import YaoLandmarkDetection
 
 
 def get_args() -> dict:
@@ -52,10 +53,18 @@ def run(args: dict, seed: int = 42) -> dict:
         resize_to=ModelTypes.get_model_type(args.model_name).resize_to,
     )
 
+    model_args = {
+        'model_name': args.model_name,
+        'point_ids': datamodule.dataset.point_ids,
+        'model_size': args.model_size,
+    }
+
+    #model = YaoLandmarkDetection(
+    #    **model_args
+    #)
+
     model = CephalometricLandmarkDetector(
-        model_name=args.model_name,
-        point_ids=datamodule.dataset.point_ids,
-        model_size=args.model_size,
+        **model_args
     )
 
     checkpoint_callback = ModelCheckpoint(

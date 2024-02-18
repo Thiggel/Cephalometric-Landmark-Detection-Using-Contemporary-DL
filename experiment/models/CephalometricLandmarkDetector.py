@@ -4,7 +4,8 @@ from torch import nn
 from torch.optim import Adam, Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau, LRScheduler
 
-from models.ModelTypes import ModelTypes
+from models.ViT import ViT
+from models.ConvNextV2 import ConvNextV2
 
 
 class CephalometricLandmarkDetector(L.LightningModule):
@@ -14,6 +15,8 @@ class CephalometricLandmarkDetector(L.LightningModule):
         point_ids: list[str],
         reduce_lr_patience: int = 25,
         model_size: str = 'tiny',
+        *args,
+        **kwargs
     ):
         super().__init__()
 
@@ -25,9 +28,12 @@ class CephalometricLandmarkDetector(L.LightningModule):
         self.point_ids = point_ids
 
     def _init_model(self, model_name: str) -> nn.Module:
-        model_type = ModelTypes.get_model_type(model_name)
+        model_types = {
+            'ViT': lambda model_size: ViT(model_size),
+            'ConvNextV2': lambda model_size: ConvNextV2(model_size),
+        }
 
-        return model_type.initialize(self.model_size)
+        return model_types[model_name](self.model_size)
 
     def forward(self, x):
         return self.model(x)
@@ -111,7 +117,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
         loss, mm_error = self.step(batch, with_mm_error=True)
 
         for (id, point_id) in enumerate(self.point_ids):
-            self.log(f'{point_id}_mm_error', mm_error[id].mean())
+            self.log(f'{point_id}_mm_error', mm_error[id].mean(), logger=False)
 
         mm_error = mm_error.mean()
 
