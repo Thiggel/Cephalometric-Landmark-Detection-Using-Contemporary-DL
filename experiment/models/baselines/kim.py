@@ -196,29 +196,30 @@ class KimLandmarkDetection(L.LightningModule):
         loss, predictions = self.step(batch, batch_idx)
         targets = batch[1]
 
-        mm_error = self.mm_loss.magnitude_to_mm(
+        __, unreduced_mm_error = self.mm_loss(
             predictions,
-            targets
+            targets,
+            with_mm_error=True
         )
 
-        return loss, mm_error
+        return loss, unreduced_mm_error
 
     def validation_step(self, batch, batch_idx):
-        loss, mm_error = self.validation_test_step(batch, batch_idx)
+        loss, unreduced_mm_error = self.validation_test_step(batch, batch_idx)
 
         self.log('val_loss', loss, prog_bar=True)
-        self.log('val_mm_error', mm_error.mean(), prog_bar=True)
+        self.log('val_mm_error', unreduced_mm_error.mean(), prog_bar=True)
 
         return loss
 
     def test_step(self, batch, batch_idx):
-        loss, mm_error = self.validation_test_step(batch, batch_idx)
+        loss, unreduced_mm_error = self.validation_test_step(batch, batch_idx)
 
         for (id, point_id) in enumerate(self.point_ids):
-            self.log(f'{point_id}_mm_error', mm_error[id].mean())
+            self.log(f'{point_id}_mm_error', unreduced_mm_error[id].mean())
 
         self.log('test_loss', loss, prog_bar=True)
-        self.log('test_mm_error', mm_error.mean(), prog_bar=True)
+        self.log('test_mm_error', unreduced_mm_error.mean(), prog_bar=True)
 
         return loss
 

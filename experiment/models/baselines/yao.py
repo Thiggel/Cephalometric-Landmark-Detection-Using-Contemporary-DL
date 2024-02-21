@@ -6,8 +6,8 @@ from torch.optim import Adam, Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau, LRScheduler
 import lightning as L
 
-from utils.HasL2Loss import HasL2Loss
 from utils.CanExtractPatches import CanExtractPatches
+from models.losses.MaskedWingLoss import MaskedWingLoss
 
 
 class ASPP(nn.Module):
@@ -233,8 +233,7 @@ class LandmarkDetection(nn.Module, CanExtractPatches):
 class YaoLandmarkDetection(
     L.LightningModule,
     DetectionModule,
-    CanExtractPatches,
-    HasL2Loss
+    CanExtractPatches
 ):
     def __init__(
         self,
@@ -258,18 +257,14 @@ class YaoLandmarkDetection(
         self.gaussian_sigma = gaussian_sigma
         self.gaussian_alpha = gaussian_alpha
         self.patch_size = (96, 96)
-        self.px_per_m = self.get_px_per_m(
-            original_image_size=(1360, 1840),
-            resize_to=(576, 512)
-        )
+        self.loss = MaskedWingLoss()
 
     def forward(self, x):
         return self.model(x)[-1]
 
     def step(
         self,
-        batch: tuple[torch.Tensor, torch.Tensor],
-        with_mm_error: bool = False
+        batch: tuple[torch.Tensor, torch.Tensor]
     ):
         images, points, target_heatmaps_full, target_heatmaps_patch = batch
 
@@ -282,13 +277,7 @@ class YaoLandmarkDetection(
         loss = F.l1_loss(heatmaps_full, target_heatmaps_full) + \
             F.l1_loss(heatmaps_patch, target_heatmaps_patch)
 
-        _, mm_error = self.masked_l2_loss(
-            point_predictions,
-            points,
-            with_mm_error
-        )
-
-        return loss, mm_error
+        return loss, point_predictions
 
     def training_step(
         self,
@@ -307,17 +296,35 @@ class YaoLandmarkDetection(
 
         return loss
 
+    def validation_test_step(
+        self,
+        batch: tuple[torch.Tensor, torch.Tensor],
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        loss, predictions = self.step(batch)
+        targets = batch[1]
+
+        _, unreduced_mm_error = self.loss(
+            predictions,
+            targets,
+            with_mm_error=True
+        )
+
+        return loss, unreduced_mm_error
+
     def validation_step(
         self,
         batch: tuple[torch.Tensor, torch.Tensor],
         batch_idx: int
     ):
-        loss, mm_error = self.step(batch, with_mm_error=True)
-
-        mm_error = mm_error.mean()
+        loss, unreduced_mm_error = self.validation_test_step(batch)
 
         self.log('val_loss', loss, prog_bar=True, on_epoch=True)
-        self.log('val_mm_error', mm_error, prog_bar=True, on_epoch=True)
+        self.log(
+            'val_mm_error',
+            unreduced_mm_error.mean(),
+            prog_bar=True,
+            on_epoch=True
+        )
 
         return loss
 
@@ -326,15 +333,13 @@ class YaoLandmarkDetection(
         batch: tuple[torch.Tensor, torch.Tensor],
         batch_idx: int
     ):
-        loss, mm_error = self.step(batch, with_mm_error=True)
+        loss, unreduced_mm_error = self.validation_test_step(batch)
 
         for (id, point_id) in enumerate(self.point_ids):
-            self.log(f'{point_id}_mm_error', mm_error[id].mean())
-
-        mm_error = mm_error.mean()
+            self.log(f'{point_id}_mm_error', unreduced_mm_error[id].mean())
 
         self.log('test_loss', loss, prog_bar=True)
-        self.log('test_mm_error', mm_error, prog_bar=True)
+        self.log('test_mm_error', unreduced_mm_error.mean(), prog_bar=True)
 
         return loss
 
