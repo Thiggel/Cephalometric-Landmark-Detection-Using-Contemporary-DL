@@ -41,16 +41,36 @@ def get_args() -> dict:
 
     return args
 
+def test_dataset(datamodule):
+    for batch in datamodule.train_dataloader():
+        images, points = batch
+        import matplotlib.pyplot as plt
+        num_points = 44
+        cmap = plt.cm.get_cmap('tab20', num_points)
+
+        fig, ax = plt.subplots(5, 4)
+        for i in range(20):
+            ax[i // 4, i % 4].imshow(images[i].squeeze(0), cmap='gray')
+            for j in range(num_points):
+                ax[i // 4, i % 4].scatter(points[i][j, 0], points[i][j, 1], color=cmap(j), s=5)
+
+        plt.show()
+        break
+
 
 def run(args: dict, seed: int = 42) -> dict:
     set_seed(seed)
+
+    model_type = ModelTypes.get_model_type(args.model_name)
 
     datamodule = LateralSkullRadiographDataModule(
         root_dir=args.root_dir,
         csv_file=args.csv_file,
         splits=args.splits,
         batch_size=args.batch_size,
-        resize_to=ModelTypes.get_model_type(args.model_name).resize_to,
+        crop=model_type.crop,
+        resize_to=model_type.resize_to,
+        use_heatmaps=model_type.use_heatmaps,
     )
 
     model_args = {
@@ -59,13 +79,7 @@ def run(args: dict, seed: int = 42) -> dict:
         'model_size': args.model_size,
     }
 
-    #model = YaoLandmarkDetection(
-    #    **model_args
-    #)
-
-    model = CephalometricLandmarkDetector(
-        **model_args
-    )
+    model = model_type.initialize(**model_args)
 
     checkpoint_callback = ModelCheckpoint(
         dirpath='checkpoints/',

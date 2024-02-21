@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from transformers import ViTModel, ViTConfig
+from transformers import ViTModel
 
 
 class Downscaling(nn.Sequential):
@@ -30,20 +30,18 @@ class ViT(nn.Module):
 
     def _load_model(self, model_type: str) -> nn.Module:
         if model_type == 'tiny':
-            model_name = 'WinKawaks/vit-tiny-patch16-224'
+            model_name = 'WinKawaks/vit-small-patch16-224' # 'WinKawaks/vit-tiny-patch16-224'
         elif model_type == 'normal':
             model_name = 'google/vit-base-patch16-224-in21k'
         else:
             raise ValueError("model_type must be either 'tiny' or 'normal'")
 
-        config = ViTConfig.from_pretrained(model_name)
+        model = ViTModel.from_pretrained(model_name)
 
-        model = ViTModel(config)
-
-        return model, config
+        return model, model.config
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
-        images = self.downscaling(images)
+        images = images.repeat(1, 3, 1, 1)
         output = self.model(images).last_hidden_state[:, 0, :]
         output = self.head(output).reshape(-1, self.output_size, 2)
 

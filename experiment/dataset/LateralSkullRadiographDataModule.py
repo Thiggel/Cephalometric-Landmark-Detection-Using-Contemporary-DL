@@ -15,7 +15,9 @@ class LateralSkullRadiographDataModule(L.LightningDataModule):
         transform: Callable = None,
         splits: tuple[int, int, int] = (0.8, 0.1, 0.1),
         batch_size: int = 32,
+        crop: bool = False,
         resize_to: tuple[int, int] = (450, 450),
+        use_heatmaps: bool = False,
     ):
         super().__init__()
 
@@ -23,7 +25,9 @@ class LateralSkullRadiographDataModule(L.LightningDataModule):
             root_dir=root_dir,
             csv_file=csv_file,
             transform=transform,
+            crop=crop,
             resize_to=resize_to,
+            use_heatmaps=use_heatmaps
         )
 
         self.train_dataset, self.val_dataset, self.test_dataset = random_split(

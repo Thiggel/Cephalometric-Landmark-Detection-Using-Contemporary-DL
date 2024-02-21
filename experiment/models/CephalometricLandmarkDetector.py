@@ -6,6 +6,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, LRScheduler
 
 from models.ViT import ViT
 from models.ConvNextV2 import ConvNextV2
+from models.losses.MaskedWingLoss import MaskedWingLoss
 
 
 class CephalometricLandmarkDetector(L.LightningModule):
@@ -27,6 +28,8 @@ class CephalometricLandmarkDetector(L.LightningModule):
         self.model = self._init_model(model_name)
         self.point_ids = point_ids
 
+        self.loss = MaskedWingLoss()
+
     def _init_model(self, model_name: str) -> nn.Module:
         model_types = {
             'ViT': lambda model_size: ViT(model_size),
@@ -38,45 +41,22 @@ class CephalometricLandmarkDetector(L.LightningModule):
     def forward(self, x):
         return self.model(x)
 
-    def masked_l2_loss(self, predictions: torch.Tensor, targets: torch.Tensor):
-        l2_loss = ((predictions - targets) ** 2).sum(-1).sqrt()
-
-        mask = (targets > 0).prod(-1)
-        masked_l2_loss = l2_loss * mask
-
-        return masked_l2_loss
-
-    def get_mm_error(
-        self,
-        non_reduced_loss: torch.Tensor,
-    ) -> torch.Tensor:
-        px_per_m = torch.tensor(7_756)
-        m_to_mm = 1000
-
-        return (
-            non_reduced_loss
-            / px_per_m.unsqueeze(0).unsqueeze(1).unsqueeze(2)
-            * m_to_mm
-        ).squeeze().mean(0)
-
     def step(
         self,
         batch: tuple[torch.Tensor, torch.Tensor],
         with_mm_error: bool = False
     ):
-        images, points = batch
+        inputs, targets, _, _ = batch
 
-        predictions = self.model(images)
+        predictions = self.model(inputs)
 
-        non_reduced_loss = self.masked_l2_loss(predictions, points)
+        loss, unreduced_mm_error = self.loss(
+            predictions,
+            targets,
+            with_mm_error=with_mm_error,
+        )
 
-        mm_error = self.get_mm_error(
-            non_reduced_loss
-        ) if with_mm_error else None
-
-        loss = non_reduced_loss.mean()
-
-        return loss, mm_error
+        return loss, unreduced_mm_error
 
     def training_step(
         self,
@@ -117,7 +97,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
         loss, mm_error = self.step(batch, with_mm_error=True)
 
         for (id, point_id) in enumerate(self.point_ids):
-            self.log(f'{point_id}_mm_error', mm_error[id].mean(), logger=False)
+            self.log(f'{point_id}_mm_error', mm_error[id].mean())
 
         mm_error = mm_error.mean()
 
@@ -126,7 +106,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
 
         return loss
 
-    def configure_optimizers(self) -> tuple[Optimizer, LRScheduler]:
+    def configure_optimizers(self) -> dict:
         optimizer = Adam(self.parameters(), lr=0.001)
         scheduler = ReduceLROnPlateau(
             optimizer,

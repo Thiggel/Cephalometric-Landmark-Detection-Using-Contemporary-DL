@@ -22,7 +22,7 @@ class ImagePredictionLogger(Callback):
         return points
 
     def on_validation_epoch_start(self, trainer, pl_module):
-        images, targets = next(iter(trainer.datamodule.val_dataloader()))
+        images, targets, _, _ = next(iter(trainer.datamodule.val_dataloader()))
         images = images[:self.num_samples]
 
         preds = pl_module(images)
