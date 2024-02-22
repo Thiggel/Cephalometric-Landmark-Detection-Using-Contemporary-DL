@@ -53,7 +53,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
             for block_idx in range(num_hourglass_modules)
         ])
 
-    def forward(
+    def forward_with_heatmaps(
         self,
         x: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -98,22 +98,35 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
 
         return global_heatmaps, local_heatmaps, refined_point_predictions
 
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        _, _, predictions = self.forward_with_heatmaps(x)
+
+        return predictions
+
     def step(self, batch, batch_idx):
         images, targets = batch
 
-        global_heatmaps, local_heatmaps, predictions = self(images)
+        (
+            global_heatmaps,
+            local_heatmaps,
+            predictions
+        ) = self.forward_with_heatmaps(images)
 
-        target_heatmaps = self._get_heatmaps(
-            targets
-        )  # batch_size, 44, 256, 256
+        target_heatmaps, mask = self._create_heatmaps(targets)
 
         loss = F.binary_cross_entropy_with_logits(
-            global_heatmaps, target_heatmaps
+            global_heatmaps,
+            target_heatmaps,
+            reduction='none'
         ) + F.binary_cross_entropy_with_logits(
-            local_heatmaps, target_heatmaps
+            local_heatmaps,
+            target_heatmaps,
+            reduction='none'
         )
 
-        return loss, predictions
+        masked_loss = loss * mask
+
+        return masked_loss, predictions
 
     def training_step(self, batch, batch_idx):
         loss, _ = self.step(batch, batch_idx)

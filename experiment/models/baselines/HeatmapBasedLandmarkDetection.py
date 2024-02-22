@@ -7,8 +7,11 @@ class HeatmapBasedLandmarkDetection:
         self,
         heatmaps: torch.Tensor
     ) -> torch.Tensor:
-        # heatmaps: batch_size, 44, 256, 256
-        # returns: batch_size, 44, 2
+        """
+        For heatmaps of shape (batch_size, num_points, height, width),
+        this function returns the highest points in the shape
+        (batch_size, num_points, 2)
+        """
         batch_size, num_points, height, width = heatmaps.shape
         reshaped_heatmaps = heatmaps.view(
             batch_size, num_points, -1
@@ -18,18 +21,6 @@ class HeatmapBasedLandmarkDetection:
         y_offset = argmax_indices_flat // width
         x_offset = argmax_indices_flat % width
         argmax_indices = torch.stack([x_offset, y_offset], dim=2)
-
-        #import matplotlib.pyplot as plt
-        #fig, ax = plt.subplots(4, 5)
-        #for i in range(20):
-        #    ax[i // 5, i % 5].imshow(heatmaps[0][i].detach().numpy())
-        #    ax[i // 5, i % 5].scatter(
-        #        argmax_indices[0][i][0],
-        #        argmax_indices[0][i][1],
-        #        color='red'
-        #    )
-
-        #plt.show()
 
         return argmax_indices
 
@@ -147,7 +138,7 @@ class HeatmapBasedLandmarkDetection:
                     ) / gaussian_sd ** 2
                 )
 
-        return heatmaps, mask
+        return heatmaps, mask.unsqueeze(-1).unsqueeze(-1)
 
     def _get_patch_resize_to(self) -> torch.Tensor:
         """
