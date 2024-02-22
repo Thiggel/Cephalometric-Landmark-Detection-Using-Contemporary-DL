@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-import torch.nn.functional as F
 
 
 class MaskedWingLoss(nn.Module):
@@ -10,7 +9,7 @@ class MaskedWingLoss(nn.Module):
         epsilon: float = 2,
         old_px_per_m: int = 7_756,
         original_image_size: tuple[int, int] = (1360, 1840),
-        resize_to: tuple[int, int] = (450, 450),
+        resize_to: tuple[int, int] = (224, 224),
     ):
         super().__init__()
 
@@ -38,12 +37,18 @@ class MaskedWingLoss(nn.Module):
 
         return new_px_per_m
 
+    def difference_to_magnitude(
+        self,
+        difference: torch.Tensor
+    ) -> torch.Tensor:
+        return (difference ** 2).sum(-1).sqrt()
+
     def wing_loss(
         self,
         predictions: torch.Tensor,
         targets: torch.Tensor,
     ) -> torch.Tensor:
-        magnitude = F.l1_loss(predictions, targets, reduction='none')
+        magnitude = self.difference_to_magnitude(targets - predictions)
 
         loss = torch.where(
             magnitude < self.w,
@@ -53,14 +58,18 @@ class MaskedWingLoss(nn.Module):
 
         return loss, magnitude
 
-    def magnitude_to_mm(
+    def mm_error(
         self,
-        magnitude: torch.Tensor,
+        predictions: torch.Tensor,
+        targets: torch.Tensor,
         mask: torch.Tensor
     ) -> torch.Tensor:
         m_to_mm = 1000
-        mm_error = magnitude * self.px_per_m * m_to_mm
-        masked_mm_error = mm_error * mask
+        difference = predictions - targets
+        difference_mm = difference * self.px_per_m * m_to_mm
+        magnitude = self.difference_to_magnitude(difference_mm)
+
+        masked_mm_error = magnitude * mask
         masked_mm_error = masked_mm_error.squeeze().mean(0)
 
         return masked_mm_error
@@ -76,7 +85,8 @@ class MaskedWingLoss(nn.Module):
         mask = (targets > 0).prod(-1)
         masked_loss = (loss * mask).mean()
 
-        masked_unreduced_mm_error = self.magnitude_to_mm(magnitude, mask) \
-            if with_mm_error else None
+        masked_unreduced_mm_error = self.mm_error(
+            predictions, targets, mask
+        ) if with_mm_error else None
 
         return masked_loss, masked_unreduced_mm_error

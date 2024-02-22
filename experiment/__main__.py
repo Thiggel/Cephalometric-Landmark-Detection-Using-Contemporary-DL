@@ -41,21 +41,12 @@ def get_args() -> dict:
 
     return args
 
-def test_dataset(datamodule):
-    for batch in datamodule.train_dataloader():
-        images, points = batch
-        import matplotlib.pyplot as plt
-        num_points = 44
-        cmap = plt.cm.get_cmap('tab20', num_points)
 
-        fig, ax = plt.subplots(5, 4)
-        for i in range(20):
-            ax[i // 4, i % 4].imshow(images[i].squeeze(0), cmap='gray')
-            for j in range(num_points):
-                ax[i // 4, i % 4].scatter(points[i][j, 0], points[i][j, 1], color=cmap(j), s=5)
+def get_model_name(module: L.LightningModule) -> str:
+    if not hasattr(module, 'model'):
+        return module.__class__.__name__
 
-        plt.show()
-        break
+    return module.model.__class__.__name__
 
 
 def run(args: dict, seed: int = 42) -> dict:
@@ -70,7 +61,6 @@ def run(args: dict, seed: int = 42) -> dict:
         batch_size=args.batch_size,
         crop=model_type.crop,
         resize_to=model_type.resize_to,
-        use_heatmaps=model_type.use_heatmaps,
     )
 
     model_args = {
@@ -95,7 +85,7 @@ def run(args: dict, seed: int = 42) -> dict:
 
     tensorboard_logger = TensorBoardLogger(
         'logs/',
-        name=model.model.__class__.__name__ + ' ' + date.today().isoformat(),
+        name=get_model_name(model) + ' ' + date.today().isoformat(),
     )
 
     image_logger = ImagePredictionLogger(num_samples=5)

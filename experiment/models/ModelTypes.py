@@ -4,6 +4,7 @@ import torch.nn as nn
 
 from models.CephalometricLandmarkDetector import CephalometricLandmarkDetector
 from models.baselines.yao import YaoLandmarkDetection
+from models.baselines.kim import KimLandmarkDetection
 
 
 @dataclass
@@ -11,7 +12,6 @@ class ModelType:
     name: str
     crop: bool
     resize_to: tuple[int, int]
-    use_heatmaps: bool
     model: nn.Module
 
     def initialize(self, *args, **kwargs) -> nn.Module:
@@ -30,29 +30,25 @@ class ModelTypes(Enum):
             ModelTypes.Kim: ModelType(
                 name='Kim',
                 crop=True,
-                resize_to=(1360, 1360),
-                use_heatmaps=False,
-                model=CephalometricLandmarkDetector
+                resize_to=(600, 600),#(1360, 1360),
+                model=KimLandmarkDetection
             ),
             ModelTypes.ViT: ModelType(
                 name='ViT',
                 crop=False,
                 resize_to=(224, 224),
-                use_heatmaps=False,
                 model=CephalometricLandmarkDetector
             ),
             ModelTypes.ConvNextV2: ModelType(
                 name='ConvNextV2',
                 crop=False,
                 resize_to=(450, 450),
-                use_heatmaps=False,
                 model=CephalometricLandmarkDetector
             ),
             ModelTypes.Yao: ModelType(
                 name='Yao',
                 crop=False,
                 resize_to=(576, 512),
-                use_heatmaps=True,
                 model=YaoLandmarkDetection
             ),
         }

@@ -10,17 +10,14 @@ from tqdm import tqdm
 from albumentations.augmentations.transforms import \
         GaussNoise
 
-from utils.CanExtractPatches import CanExtractPatches
 
-
-class LateralSkullRadiographDataset(Dataset, CanExtractPatches):
+class LateralSkullRadiographDataset(Dataset):
     def __init__(
         self,
         root_dir: str,
         csv_file: str,
         crop: bool = False,
         resize_to: tuple[int, int] = (450, 450),
-        use_heatmaps: bool = False,
         transform: transforms.Compose = transforms.Compose([
             transforms.ColorJitter(
                 brightness=0.5,
@@ -41,7 +38,6 @@ class LateralSkullRadiographDataset(Dataset, CanExtractPatches):
         self.resize = transforms.Resize(resize_to)
         self.to_tensor = transforms.ToTensor()
         self.resize_to = resize_to
-        self.use_heatmaps = use_heatmaps
         self.transform = transform
         self.flip_augmentations = flip_augmentations
 
@@ -53,8 +49,6 @@ class LateralSkullRadiographDataset(Dataset, CanExtractPatches):
             self.images,
             self.points,
             self.point_ids,
-            self.heatmaps_full,
-            self.heatmaps_patch
         ) = self._load_data()
 
         print('Done!')
@@ -103,19 +97,9 @@ class LateralSkullRadiographDataset(Dataset, CanExtractPatches):
     def _saved_points_path(self) -> str:
         return os.path.join(self.root_dir, f'points_{self.resize_to}.pt')
 
-    @property
-    def _saved_heatmaps_full_path(self) -> str:
-        return os.path.join(self.root_dir, f'heatmaps_full_{self.resize_to}.pt')
-
-    @property
-    def _saved_heatmaps_patch_path(self) -> str:
-        return os.path.join(self.root_dir, f'heatmaps_patch_{self.resize_to}.pt')
-
     def _load_dataset(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         images = []
         points = []
-        heatmaps_full = []
-        heatmaps_patch = []
 
         for index in tqdm(range(len(self.data_frame))):
             image = self._load_image(index)
@@ -124,20 +108,9 @@ class LateralSkullRadiographDataset(Dataset, CanExtractPatches):
             images.append(image)
             points.append(image_points)
 
-            if self.use_heatmaps:
-                heatmap_full, heatmap_patch = self._load_heatmaps(
-                    image,
-                    image_points,
-                )
-
-                heatmaps_full.append(heatmap_full)
-                heatmaps_patch.append(heatmap_patch)
-
         return (
             torch.stack(images),
             torch.stack(points),
-            torch.stack(heatmaps_full) if self.use_heatmaps else None,
-            torch.stack(heatmaps_patch) if self.use_heatmaps else None,
         )
 
     def _cormalize_btw_0_and_1(self, images: torch.Tensor) -> torch.Tensor:
@@ -151,83 +124,24 @@ class LateralSkullRadiographDataset(Dataset, CanExtractPatches):
 
         return normalize(images)
 
-    def _generate_heatmap(
-        self,
-        target_points: torch.Tensor,
-        images: torch.Tensor,
-        radius_around_point: int = 5,
-        gaussian_sigma: float = 2.0,
-    ) -> torch.Tensor:
-        _, height, width = images.shape
-        num_points, _ = target_points.size()
-
-        y = torch.arange(0, height).float()
-        x = torch.arange(0, width).float()
-        yy, xx = torch.meshgrid(y, x)
-
-        heatmap = torch.zeros(height, width)
-        for point_idx in range(num_points):
-            x_center, y_center = target_points[point_idx]
-
-            if (
-                x_center <= 0 or x_center >= width or
-                y_center <= 0 or y_center >= height
-            ):
-                continue
-
-            heatmap += torch.exp(
-                -0.5 * (
-                    (xx - x_center) ** 2 +
-                    (yy - y_center) ** 2
-                ) / gaussian_sigma ** 2
-            )
-
-        return heatmap
-
-    def _load_heatmaps(
-        self,
-        image: torch.Tensor,
-        points: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        target_heatmap_full = self._generate_heatmap(
-            points,
-            image
-        )
-
-        target_heatmaps_patch = self._extract_patches(
-            target_heatmap_full.unsqueeze(0),
-            points.unsqueeze(0),
-        ).squeeze(0)
-
-        return target_heatmap_full.unsqueeze(0), target_heatmaps_patch
-
     def _load_data(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         point_ids = self._load_point_ids()
 
         if os.path.exists(self._saved_images_path) \
-                and os.path.exists(self._saved_points_path) \
-                and not self.use_heatmaps or (
-                    os.path.exists(self._saved_heatmaps_full_path)
-                    and os.path.exists(self._saved_heatmaps_patch_path)
-                ):
+                and os.path.exists(self._saved_points_path):
 
             images = torch.load(self._saved_images_path)
             points = torch.load(self._saved_points_path)
 
-            heatmaps_full = torch.load(self._saved_heatmaps_full_path) \
-                if self.use_heatmaps else None
-            heatmaps_patch = torch.load(self._saved_heatmaps_patch_path) \
-                if self.use_heatmaps else None
+            return images, points, point_ids
 
-            return images, points, point_ids, heatmaps_full, heatmaps_patch
-
-        images, points, heatmaps_full, heatmaps_patch = self._load_dataset()
+        images, points = self._load_dataset()
 
         images = self._normalize(images)
 
-        self._save_to_pickle(images, points, heatmaps_full, heatmaps_patch)
+        self._save_to_pickle(images, points)
 
-        return images, points, point_ids, heatmaps_full, heatmaps_patch
+        return images, points, point_ids
 
     def _load_point_ids(self) -> list[str]:
         points_str = self.data_frame.iloc[0]['points']
@@ -263,107 +177,101 @@ class LateralSkullRadiographDataset(Dataset, CanExtractPatches):
         self,
         images: torch.Tensor,
         points: torch.Tensor,
-        heatmaps_full: torch.Tensor,
-        heatmaps_patch: torch.Tensor,
     ):
         torch.save(images, self._saved_images_path)
         torch.save(points, self._saved_points_path)
 
-        if self.use_heatmaps:
-            torch.save(heatmaps_full, self._saved_heatmaps_full_path)
-            torch.save(heatmaps_patch, self._saved_heatmaps_patch_path)
-
     def __len__(self) -> int:
         return len(self.data_frame)
+
+    def _handle_invalid_points(
+        self,
+        original_points: torch.Tensor,
+        flipped_points: torch.Tensor
+    ) -> torch.Tensor:
+        invalid_points = (
+            original_points[:, 0] <= 0
+        ) | (
+            original_points[:, 1] <= 0
+        )
+
+        flipped_points[invalid_points, :] = -1
+
+        return flipped_points
 
     def _flip_horizontally(
         self,
         image: torch.Tensor,
         points: torch.Tensor,
-        heatmap_full: torch.Tensor,
-        heatmaps_patch: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         image = torch.flip(image, [-1])
+        _, height, width = image.shape
 
         flipped_points = points.clone()
-        flipped_points[..., 0] = image.shape[-1] - flipped_points[..., 0]
 
-        if self.use_heatmaps:
-            heatmap_full = torch.flip(heatmap_full, [-1])
-            heatmaps_patch = torch.flip(heatmaps_patch, [-1])
+        flipped_points[..., 0] = width - flipped_points[..., 0]
 
-        return image, flipped_points, heatmap_full, heatmaps_patch
+        flipped_points = self._handle_invalid_points(
+            points,
+            flipped_points
+        )
+
+        return image, flipped_points
 
     def _flip_vertically(
         self,
         image: torch.Tensor,
         points: torch.Tensor,
-        heatmap_full: torch.Tensor,
-        heatmaps_patch: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         image = torch.flip(image, [1])
 
         flipped_points = points.clone()
+
         flipped_points[..., 1] = image.shape[-2] - flipped_points[..., 1]
 
-        if self.use_heatmaps:
-            heatmap_full = torch.flip(heatmap_full, [1])
-            heatmaps_patch = torch.flip(heatmaps_patch, [2])
+        flipped_points = self._handle_invalid_points(
+            points,
+            flipped_points
+        )
 
-        return image, flipped_points, heatmap_full, heatmaps_patch
+        return image, flipped_points
 
     def _flip_image(
         self,
         image: torch.Tensor,
         points: torch.Tensor,
-        heatmap_full: torch.Tensor,
-        heatmaps_patch: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         if torch.rand(1) > 0.5:
             (
                 image,
                 points,
-                heatmap_full,
-                heatmaps_patch
             ) = self._flip_horizontally(
                 image,
                 points,
-                heatmap_full,
-                heatmaps_patch
             )
 
         if torch.rand(1) > 0.5:
             (
                 image,
                 points,
-                heatmap_full,
-                heatmaps_patch
             ) = self._flip_vertically(
                 image,
                 points,
-                heatmap_full,
-                heatmaps_patch
             )
 
-        return image, points, heatmap_full, heatmaps_patch
+        return image, points
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         image = self.images[idx]
         points = self.points[idx]
-        heatmap_full = self.heatmaps_full[idx] \
-            if self.use_heatmaps else torch.tensor([])
-        heatmaps_patch = self.heatmaps_patch[idx] \
-            if self.use_heatmaps else torch.tensor([])
 
         if self.transform is not None:
             image = self.transform(image)
 
         if self.flip_augmentations:
-            image, points, heatmap_full, heatmaps_patch = self._flip_image(
+            image, points = self._flip_image(
                 image,
                 points,
-                heatmap_full,
-                heatmaps_patch
             )
 
-        return image, points, heatmap_full, heatmaps_patch
+        return image, points

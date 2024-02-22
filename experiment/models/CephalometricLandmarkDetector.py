@@ -1,7 +1,7 @@
 import lightning as L
 import torch
 from torch import nn
-from torch.optim import Adam, Optimizer
+from torch.optim import RMSprop, Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau, LRScheduler
 
 from models.ViT import ViT
@@ -46,7 +46,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
         batch: tuple[torch.Tensor, torch.Tensor],
         with_mm_error: bool = False
     ):
-        inputs, targets, _, _ = batch
+        inputs, targets = batch
 
         predictions = self.model(inputs)
 
@@ -107,7 +107,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
         return loss
 
     def configure_optimizers(self) -> dict:
-        optimizer = Adam(self.parameters(), lr=0.001)
+        optimizer = RMSprop(self.parameters(), lr=0.001)
         scheduler = ReduceLROnPlateau(
             optimizer,
             patience=self.reduce_lr_patience
