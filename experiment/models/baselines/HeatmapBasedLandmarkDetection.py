@@ -72,30 +72,32 @@ class HeatmapBasedLandmarkDetection:
                 point = point_predictions[datapoint_idx][point_idx]
 
                 (
-                    x_min,
-                    x_max,
-                    y_min,
-                    y_max,
-                    x_offset,
-                    y_offset
+                    image_x1,
+                    image_x2,
+                    image_y1,
+                    image_y2,
+
+                    patch_y1,
+                    patch_y2,
+                    patch_x1,
+                    patch_x2,
                 ) = self._calculate_bounding_boxes(
                     point[0],
                     point[1],
                     self.patch_resize_to,
-                    self.original_image_size
+                    self.resize_to
                 )
-
-                print(x_min, x_max, y_min, y_max, x_offset, y_offset)
-                exit()
 
                 global_heatmaps[
                     datapoint_idx,
                     point_idx,
-                    y:y + self.resize_to[1],
-                    x:x + self.resize_to[0]
+                    image_y1:image_y2,
+                    image_x1:image_x2,
                 ] = resized_local_heatmaps[
                     datapoint_idx,
-                    point_idx
+                    point_idx,
+                    patch_y1:patch_y2,
+                    patch_x1:patch_x2,
                 ]
 
         return global_heatmaps
@@ -132,6 +134,16 @@ class HeatmapBasedLandmarkDetection:
         torch.Tensor,
         torch.Tensor
     ]:
+        """
+        This function takes in a point (x, y) and a patch size and
+        calculates the bounding boxes for the patch and the image
+        that the patch is extracted from.
+        If the patch would be outside of the image, the bounding
+        boxes are adjusted accordingly.
+        Hence, it can be used to calculate the bounding boxes for
+        patch extraction from an image as well as pasting a patch
+        into an image.
+        """
         image_height, image_width = image_size
         patch_height, patch_width = patch_size
 
@@ -141,21 +153,29 @@ class HeatmapBasedLandmarkDetection:
         x_offset = patch_width // 2
         y_offset = patch_height // 2
 
-        x_min = max(0, x - x_offset)
-        x_max = min(image_width, x + x_offset)
-        y_min = max(0, y - y_offset)
-        y_max = min(image_height, y + y_offset)
+        image_y1 = max(0, y - y_offset)
+        image_y2 = min(image_height, y + y_offset)
+        image_x1 = max(0, x - x_offset)
+        image_x2 = min(image_width, x + x_offset)
 
         x_offset = max(0, x_offset - x)
         y_offset = max(0, y_offset - y)
 
+        patch_y1 = y_offset
+        patch_y2 = y_offset + image_y2 - image_y1
+        patch_x1 = x_offset
+        patch_x2 = x_offset + image_x2 - image_x1
+
         return (
-            x_min,
-            x_max,
-            y_min,
-            y_max,
-            x_offset,
-            y_offset
+            image_x1,
+            image_x2,
+            image_y1,
+            image_y2,
+
+            patch_y1,
+            patch_y2,
+            patch_x1,
+            patch_x2,
         )
 
     def _extract_patch(
@@ -166,12 +186,15 @@ class HeatmapBasedLandmarkDetection:
         debug: bool = False
     ) -> torch.Tensor:
         (
-            x_min,
-            x_max,
-            y_min,
-            y_max,
-            x_offset,
-            y_offset
+            image_x1,
+            image_x2,
+            image_y1,
+            image_y2,
+
+            patch_y1,
+            patch_y2,
+            patch_x1,
+            patch_x2,
         ) = self._calculate_bounding_boxes(
             x,
             y,
@@ -182,12 +205,12 @@ class HeatmapBasedLandmarkDetection:
         patch = torch.zeros(*self.patch_size)
 
         patch[
-            y_offset:y_offset + y_max - y_min,
-            x_offset:x_offset + x_max - x_min,
+            patch_y1:patch_y2,
+            patch_x1:patch_x2,
         ] = image[
             ...,
-            y_min:y_max,
-            x_min:x_max,
+            image_y1:image_y2,
+            image_x1:image_x2,
         ]
 
         return patch
