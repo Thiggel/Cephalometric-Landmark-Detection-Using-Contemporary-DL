@@ -102,6 +102,53 @@ class HeatmapBasedLandmarkDetection:
 
         return global_heatmaps
 
+    def _create_heatmaps(
+        self,
+        points: torch.Tensor,
+        gaussian_sd: float = 1
+    ) -> torch.Tensor:
+        """
+        Create heatmaps for target points.
+        The resulting tensor's shape will be
+        (batch_size, num_points, image_height, image_width).
+        A mask is returned alongside for points where
+        one coordinate is negative. These can then be filtered out
+        of the loss.
+        """
+        batch_size, num_points, _ = points.shape
+        heatmaps = torch.zeros(
+            batch_size,
+            num_points,
+            *self.resize_to,
+        )
+
+        mask = torch.ones(
+            batch_size,
+            num_points,
+        )
+
+        y_grid, x_grid = torch.meshgrid(
+            torch.arange(self.resize_to[0]),
+            torch.arange(self.resize_to[1]),
+        )
+
+        for i in range(batch_size):
+            for j in range(num_points):
+                x, y = points[i, j]
+
+                if x < 0 or y < 0:
+                    mask[i, j] = 0
+                    continue
+
+                heatmaps[i, j] += torch.exp(
+                    -0.5 * (
+                        (y_grid - y) ** 2 +
+                        (x_grid - x) ** 2
+                    ) / gaussian_sd ** 2
+                )
+
+        return heatmaps, mask
+
     def _get_patch_resize_to(self) -> torch.Tensor:
         """
         For some methods, a patch is extracted from the original image

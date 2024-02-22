@@ -92,8 +92,8 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
             point_predictions
         )
 
-        refined_point_predictions = self._refine_point_predictions(
-            point_predictions, local_heatmaps
+        refined_point_predictions = self._get_highest_points(
+            local_heatmaps
         )  # batch_size, 44, 2
 
         return global_heatmaps, local_heatmaps, refined_point_predictions
