@@ -1,5 +1,6 @@
 import torch
 from torchvision.transforms.functional import resize
+import torch.nn.functional as F
 
 
 class HeatmapBasedLandmarkDetection:
@@ -107,36 +108,24 @@ class HeatmapBasedLandmarkDetection:
         of the loss.
         """
         batch_size, num_points, _ = points.shape
-        heatmaps = torch.zeros(
-            batch_size,
-            num_points,
-            *self.resize_to,
-        )
 
-        mask = torch.ones(
-            batch_size,
-            num_points,
-        )
+        mask = (points[..., 0] >= 0) & (points[..., 1] >= 0)
 
         y_grid, x_grid = torch.meshgrid(
             torch.arange(self.resize_to[0]),
             torch.arange(self.resize_to[1]),
         )
 
-        for i in range(batch_size):
-            for j in range(num_points):
-                x, y = points[i, j]
+        y_grid = y_grid.unsqueeze(0).unsqueeze(0)
+        x_grid = x_grid.unsqueeze(0).unsqueeze(0)
 
-                if x < 0 or y < 0:
-                    mask[i, j] = 0
-                    continue
+        x, y = points.split(1, dim=-1)
+        x = x.unsqueeze(-1)
+        y = y.unsqueeze(-1)
 
-                heatmaps[i, j] += torch.exp(
-                    -0.5 * (
-                        (y_grid - y) ** 2 +
-                        (x_grid - x) ** 2
-                    ) / gaussian_sd ** 2
-                )
+        heatmaps = torch.exp(
+            -0.5 * ((y_grid - y) ** 2 + (x_grid - x) ** 2) / (gaussian_sd ** 2)
+        )
 
         return heatmaps, mask.unsqueeze(-1).unsqueeze(-1)
 

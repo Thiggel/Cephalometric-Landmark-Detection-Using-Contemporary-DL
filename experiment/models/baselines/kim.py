@@ -126,7 +126,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
 
         masked_loss = loss * mask
 
-        return masked_loss, predictions
+        return masked_loss.mean(), predictions
 
     def training_step(self, batch, batch_idx):
         loss, _ = self.step(batch, batch_idx)
