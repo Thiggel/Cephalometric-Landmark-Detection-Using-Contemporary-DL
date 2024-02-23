@@ -258,11 +258,97 @@ class HeatmapBasedLandmarkDetection:
         for i in range(batch_size):
             for j in range(num_points):
                 x, y = coords[i, j]
-
-                image = images[i] if images.size(1) == 1 \
-                    else images[i, j]
-
-                patch = self._extract_patch(image, x, y)
+                patch = self._extract_patch(images[i], x, y)
                 patches[i, j] = patch
 
         return patches.unsqueeze(2)
+
+    def forward_batch(
+        self,
+        images: torch.Tensor,
+        patch_size: tuple[int, int],
+    ) -> torch.Tensor:
+        batch_size, channels, _, _ = images.shape
+
+        global_heatmaps = self.global_module(
+            images
+        )
+
+        point_predictions = self._get_highest_points(
+            global_heatmaps
+        )
+
+        regions_of_interest = self._extract_patches(
+            images, point_predictions
+        )
+
+        patch_height, patch_width = patch_size
+
+        local_heatmaps = self.local_module(
+            regions_of_interest.view(
+                batch_size * self.num_points,
+                channels,
+                patch_height,
+                patch_width
+            )
+        ).view(
+            batch_size,
+            self.num_points,
+            patch_height,
+            patch_width
+        )
+
+        local_heatmaps = self._paste_heatmaps(
+            global_heatmaps,
+            local_heatmaps,
+            point_predictions
+        )
+
+        refined_point_predictions = self._get_highest_points(
+            local_heatmaps
+        )
+
+        return global_heatmaps, local_heatmaps, refined_point_predictions
+
+    def step(
+        self,
+        batch: tuple[torch.Tensor, torch.Tensor]
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        images, targets = batch
+
+        (
+            global_heatmaps,
+            local_heatmaps,
+            predictions
+        ) = self.forward_with_heatmaps(images)
+
+        target_heatmaps, mask = self._create_heatmaps(targets)
+
+        loss = self.loss(
+            global_heatmaps,
+            target_heatmaps,
+            reduction='none'
+        ) + self.loss(
+            local_heatmaps,
+            target_heatmaps,
+            reduction='none'
+        )
+
+        masked_loss = loss * mask
+
+        return masked_loss.mean(), predictions
+
+    def validation_test_step(
+        self,
+        batch: tuple[torch.Tensor, torch.Tensor],
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        loss, predictions = self.step(batch)
+        targets = batch[1]
+
+        _, unreduced_mm_error = self.mm_error(
+            predictions,
+            targets,
+            with_mm_error=True
+        )
+
+        return loss, unreduced_mm_error

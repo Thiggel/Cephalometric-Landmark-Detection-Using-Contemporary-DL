@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
-import torch.nn.functional as F
 from torch.optim import Adam, Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau, LRScheduler
 import lightning as L
@@ -179,87 +178,23 @@ class YaoLandmarkDetection(
         self.global_module = GlobalDetectionModule(num_points)
         self.local_module = LocalCorrectionModule()
 
+        self.loss = nn.L1Loss()
         self.mm_error = MaskedWingLoss()
 
-    def forward_with_heatmaps(self, images: torch.Tensor) -> torch.Tensor:
-        batch_size, channels, height, width = images.shape
-
-        global_heatmaps = self.global_module(
-            images
-        )
-
-        point_predictions = self._get_highest_points(
-            global_heatmaps
-        )
-
-        regions_of_interest = self._extract_patches(
-            images, point_predictions
-        )
-
-        patch_height, patch_width = self.patch_size
-
-        local_heatmaps = self.local_module(
-            regions_of_interest.view(
-                batch_size * self.num_points,
-                channels,
-                patch_height,
-                patch_width
-            )
-        ).view(
-            batch_size,
-            self.num_points,
-            patch_height,
-            patch_width
-        )
-
-        local_heatmaps = self._paste_heatmaps(
-            global_heatmaps,
-            local_heatmaps,
-            point_predictions
-        )
-
-        refined_point_predictions = self._get_highest_points(
-            local_heatmaps
-        )
-
-        return global_heatmaps, local_heatmaps, refined_point_predictions
-
-    def forward(self, x):
-        return self.forward_with_heatmaps(x)[-1]
-
-    def step(
+    def forward_with_heatmaps(
         self,
-        batch: tuple[torch.Tensor, torch.Tensor]
-    ):
-        images, targets = batch
+        images: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        return self.forward_batch(images, self.patch_size)
 
-        (
-            global_heatmaps,
-            local_heatmaps,
-            predictions
-        ) = self.forward_with_heatmaps(images)
-
-        target_heatmaps, mask = self._create_heatmaps(targets)
-
-        loss = F.l1_loss(
-            global_heatmaps,
-            target_heatmaps,
-            reduction='none'
-        ) + F.l1_loss(
-            local_heatmaps,
-            target_heatmaps,
-            reduction='none'
-        )
-
-        masked_loss = loss * mask
-
-        return masked_loss.mean(), predictions
+    def forward(self, images: torch.Tensor) -> torch.Tensor:
+        return self.forward_with_heatmaps(images)[-1]
 
     def training_step(
         self,
         batch: tuple[torch.Tensor, torch.Tensor],
         batch_idx: int
-    ):
+    ) -> torch.Tensor:
         loss, _ = self.step(batch)
 
         self.log(
@@ -272,26 +207,11 @@ class YaoLandmarkDetection(
 
         return loss
 
-    def validation_test_step(
-        self,
-        batch: tuple[torch.Tensor, torch.Tensor],
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        loss, predictions = self.step(batch)
-        targets = batch[1]
-
-        _, unreduced_mm_error = self.mm_error(
-            predictions,
-            targets,
-            with_mm_error=True
-        )
-
-        return loss, unreduced_mm_error
-
     def validation_step(
         self,
         batch: tuple[torch.Tensor, torch.Tensor],
         batch_idx: int
-    ):
+    ) -> torch.Tensor:
         loss, unreduced_mm_error = self.validation_test_step(batch)
 
         self.log('val_loss', loss, prog_bar=True, on_epoch=True)
@@ -308,7 +228,7 @@ class YaoLandmarkDetection(
         self,
         batch: tuple[torch.Tensor, torch.Tensor],
         batch_idx: int
-    ):
+    ) -> torch.Tensor:
         loss, unreduced_mm_error = self.validation_test_step(batch)
 
         for (id, point_id) in enumerate(self.point_ids):

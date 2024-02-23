@@ -3,7 +3,6 @@ from torch import nn
 from torch.optim import RMSprop
 from torch.optim.lr_scheduler import ExponentialLR
 from torchvision.transforms.functional import resize
-from torch.nn import functional as F
 import lightning as L
 
 from models.losses.MaskedWingLoss import MaskedWingLoss
@@ -29,10 +28,6 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
         self.resize_to = torch.tensor(resize_to)
         self.original_image_size = original_image_size
         self.patch_resize_to = self._get_patch_resize_to()
-        self.mm_loss = MaskedWingLoss(
-            original_image_size=original_image_size,
-            resize_to=resize_to
-        )
         self.num_points = num_points
 
         self.global_module = nn.Sequential(*[
@@ -53,80 +48,24 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
             for block_idx in range(num_hourglass_modules)
         ])
 
+        self.mm_error = MaskedWingLoss(
+            original_image_size=original_image_size,
+            resize_to=resize_to
+        )
+        self.loss = nn.BCEWithLogitsLoss()
+
     def forward_with_heatmaps(
         self,
         x: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         resized = resize(x, self.resize_to)  # batch_size, 1, 256, 256
 
-        batch_size, channels, height, width = resized.shape
-
-        global_heatmaps = self.global_module(
-            resized
-        )  # batch_size, 44, 256, 256
-        point_predictions = self._get_highest_points(
-            global_heatmaps
-        )  # batch_size, 44, 2
-
-        regions_of_interest = self._extract_patches(
-            x, point_predictions
-        )  # batch_size, 44, 256, 256
-
-        local_heatmaps = self.local_module(
-            regions_of_interest.view(
-                batch_size * self.num_points,
-                channels,
-                height,
-                width
-            )
-        ).view(
-            batch_size,
-            self.num_points,
-            height,
-            width
-        )
-
-        local_heatmaps = self._paste_heatmaps(
-            global_heatmaps,
-            local_heatmaps,
-            point_predictions
-        )
-
-        refined_point_predictions = self._get_highest_points(
-            local_heatmaps
-        )  # batch_size, 44, 2
-
-        return global_heatmaps, local_heatmaps, refined_point_predictions
+        return self.forward_batch(resized, resized.shape[-2:])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         _, _, predictions = self.forward_with_heatmaps(x)
 
         return predictions
-
-    def step(self, batch, batch_idx):
-        images, targets = batch
-
-        (
-            global_heatmaps,
-            local_heatmaps,
-            predictions
-        ) = self.forward_with_heatmaps(images)
-
-        target_heatmaps, mask = self._create_heatmaps(targets)
-
-        loss = F.binary_cross_entropy_with_logits(
-            global_heatmaps,
-            target_heatmaps,
-            reduction='none'
-        ) + F.binary_cross_entropy_with_logits(
-            local_heatmaps,
-            target_heatmaps,
-            reduction='none'
-        )
-
-        masked_loss = loss * mask
-
-        return masked_loss.mean(), predictions
 
     def training_step(self, batch, batch_idx):
         loss, _ = self.step(batch, batch_idx)
@@ -135,20 +74,8 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
 
         return loss
 
-    def validation_test_step(self, batch, batch_idx):
-        loss, predictions = self.step(batch, batch_idx)
-        targets = batch[1]
-
-        _, unreduced_mm_error = self.mm_loss(
-            predictions,
-            targets,
-            with_mm_error=True
-        )
-
-        return loss, unreduced_mm_error
-
     def validation_step(self, batch, batch_idx):
-        loss, unreduced_mm_error = self.validation_test_step(batch, batch_idx)
+        loss, unreduced_mm_error = self.validation_test_step(batch)
 
         self.log('val_loss', loss, prog_bar=True)
         self.log('val_mm_error', unreduced_mm_error.mean(), prog_bar=True)
@@ -156,7 +83,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
         return loss
 
     def test_step(self, batch, batch_idx):
-        loss, unreduced_mm_error = self.validation_test_step(batch, batch_idx)
+        loss, unreduced_mm_error = self.validation_test_step(batch)
 
         for (id, point_id) in enumerate(self.point_ids):
             self.log(f'{point_id}_mm_error', unreduced_mm_error[id].mean())
