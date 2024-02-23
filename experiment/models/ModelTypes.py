@@ -12,6 +12,7 @@ class ModelType:
     name: str
     crop: bool
     resize_to: tuple[int, int]
+    resize_points_to_aspect_ratio: tuple[int, int]
     model: nn.Module
 
     def initialize(self, *args, **kwargs) -> nn.Module:
@@ -31,24 +32,28 @@ class ModelTypes(Enum):
                 name='Kim',
                 crop=True,
                 resize_to=(600, 600),#(1360, 1360),
+                resize_points_to_aspect_ratio=(256, 256),
                 model=KimLandmarkDetection
             ),
             ModelTypes.ViT: ModelType(
                 name='ViT',
                 crop=False,
                 resize_to=(224, 224),
+                resize_points_to_aspect_ratio=(224, 224),
                 model=CephalometricLandmarkDetector
             ),
             ModelTypes.ConvNextV2: ModelType(
                 name='ConvNextV2',
                 crop=False,
-                resize_to=(450, 450),
+                resize_to=(224, 224),
+                resize_points_to_aspect_ratio=(224, 224),
                 model=CephalometricLandmarkDetector
             ),
             ModelTypes.Yao: ModelType(
                 name='Yao',
                 crop=False,
                 resize_to=(576, 512),
+                resize_points_to_aspect_ratio=(576, 512),
                 model=YaoLandmarkDetection
             ),
         }

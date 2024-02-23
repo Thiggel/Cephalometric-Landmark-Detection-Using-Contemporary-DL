@@ -61,6 +61,7 @@ def run(args: dict, seed: int = 42) -> dict:
         batch_size=args.batch_size,
         crop=model_type.crop,
         resize_to=model_type.resize_to,
+        resize_points_to_aspect_ratio=model_type.resize_points_to_aspect_ratio,
     )
 
     model_args = {

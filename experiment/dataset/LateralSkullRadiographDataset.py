@@ -17,7 +17,8 @@ class LateralSkullRadiographDataset(Dataset):
         root_dir: str,
         csv_file: str,
         crop: bool = False,
-        resize_to: tuple[int, int] = (450, 450),
+        resize_to: tuple[int, int] = (224, 224),
+        resize_points_to_aspect_ratio: tuple[int, int] = (224, 224),
         transform: transforms.Compose = transforms.Compose([
             transforms.ColorJitter(
                 brightness=0.5,
@@ -38,6 +39,8 @@ class LateralSkullRadiographDataset(Dataset):
         self.resize = transforms.Resize(resize_to)
         self.to_tensor = transforms.ToTensor()
         self.resize_to = resize_to
+        self.resize_points_to_aspect_ratio = resize_points_to_aspect_ratio \
+            if resize_points_to_aspect_ratio is not None else resize_to
         self.transform = transform
         self.flip_augmentations = flip_augmentations
 
@@ -152,8 +155,8 @@ class LateralSkullRadiographDataset(Dataset):
         return ids
 
     def _resize_point(self, point: dict[str, float]) -> dict[str, float]:
-        x_ratio = self.resize_to[1] / self.original_image_size[1]
-        y_ratio = self.resize_to[0] / self.original_image_size[0]
+        x_ratio = self.resize_points_to_aspect_ratio[1] / self.original_image_size[1]
+        y_ratio = self.resize_points_to_aspect_ratio[0] / self.original_image_size[0]
 
         return [
             point['x'] * x_ratio,

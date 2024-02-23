@@ -16,7 +16,8 @@ class LateralSkullRadiographDataModule(L.LightningDataModule):
         splits: tuple[int, int, int] = (0.8, 0.1, 0.1),
         batch_size: int = 32,
         crop: bool = False,
-        resize_to: tuple[int, int] = (450, 450),
+        resize_to: tuple[int, int] = (224, 224),
+        resize_points_to_aspect_ratio: tuple[int, int] = (224, 224),
     ):
         super().__init__()
 
