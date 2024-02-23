@@ -72,7 +72,7 @@ class GlobalDetectionModule(nn.Module, HeatmapBasedLandmarkDetection):
 
         self.aspp = ASPP(64, 256, [1, 6, 12, 18])
 
-        self.conv = nn.Conv2d(256, 1, 1)
+        self.conv = nn.Conv2d(256, output_size, 1)
 
         self.upsample = nn.Upsample(
             scale_factor=4,
@@ -86,9 +86,8 @@ class GlobalDetectionModule(nn.Module, HeatmapBasedLandmarkDetection):
         x = self.aspp(x)
         x = self.conv(x)
         x = self.upsample(x)
-        coordinates = self.get_highest_points(x)
 
-        return coordinates, x
+        return x
 
 
 class LocalResNetBackbone(nn.Module):
@@ -116,7 +115,7 @@ class LocalResNetBackbone(nn.Module):
         return backbone
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.backbone[0:4](x)
+        x = self.backbone[0:4](x.repeat(1, 3, 1, 1))
 
         return self.backbone[4](x)
 
@@ -145,62 +144,7 @@ class LocalCorrectionModule(nn.Module, HeatmapBasedLandmarkDetection):
         x = self.conv(x)
         x = self.upsample(x)
 
-        highest_points = self.get_highest_points(x)
-
-        return highest_points, x
-
-
-class LandmarkDetection(nn.Module, HeatmapBasedLandmarkDetection):
-    def __init__(
-        self,
-        patch_size: tuple[int, int] = (96, 96)
-    ):
-        super(LandmarkDetection, self).__init__()
-
-        self.global_module = GlobalDetectionModule()
-        self.local_module = LocalCorrectionModule()
-
-        self.patch_size = patch_size
-
-        self.middle_of_patch = torch.tensor([
-            patch_size[0] // 2,
-            patch_size[1] // 2
-        ]).unsqueeze(0).unsqueeze(0)
-
-    def refine_point_predictions(
-        self,
-        points_full: torch.Tensor,
-        points_patch: torch.Tensor,
-    ) -> torch.Tensor:
-
-        refinement = points_patch - self.middle_of_patch
-
-        return points_full + refinement
-
-    def forward(self, images: torch.Tensor) -> torch.Tensor:
-        points_full, heatmaps_full = self.global_module(images)
-
-        patches = self._extract_patches(images, points_full) \
-            .repeat(1, 1, 3, 1, 1)
-
-        points_patch = []
-        heatmaps_patch = []
-
-        for image_patches in patches:
-            points, heatmap = self.local_module(image_patches)
-
-            points_patch.append(points.squeeze())
-            heatmaps_patch.append(heatmap)
-
-        points_patch = torch.stack(points_patch)
-        heatmaps_patch = torch.stack(heatmaps_patch)
-
-        points_refined = self.refine_point_predictions(
-            points_full,
-            points_patch
-        )
-
-        return heatmaps_full, heatmaps_patch, points_refined
+        return x
 
 
 class YaoLandmarkDetection(
@@ -214,6 +158,9 @@ class YaoLandmarkDetection(
         model_size: str = 'tiny',
         gaussian_sigma: int = 1,
         gaussian_alpha: float = 0.1,
+        resize_to: tuple[int, int] = (576, 512),
+        patch_size: tuple[int, int] = (96, 96),
+        num_points: int = 44,
         *args,
         **kwargs,
     ):
@@ -223,33 +170,90 @@ class YaoLandmarkDetection(
 
         self.model_size = model_size
         self.reduce_lr_patience = reduce_lr_patience
-        self.model = LandmarkDetection()
         self.point_ids = point_ids
+        self.num_points = num_points
+        self.patch_size = patch_size
+        self.resize_to = resize_to
+        self.patch_resize_to = patch_size
 
-        self.gaussian_sigma = gaussian_sigma
-        self.gaussian_alpha = gaussian_alpha
-        self.patch_size = (96, 96)
-        self.loss = MaskedWingLoss()
+        self.global_module = GlobalDetectionModule(num_points)
+        self.local_module = LocalCorrectionModule()
+
+        self.mm_error = MaskedWingLoss()
+
+    def forward_with_heatmaps(self, images: torch.Tensor) -> torch.Tensor:
+        batch_size, channels, height, width = images.shape
+
+        global_heatmaps = self.global_module(
+            images
+        )
+
+        point_predictions = self._get_highest_points(
+            global_heatmaps
+        )
+
+        regions_of_interest = self._extract_patches(
+            images, point_predictions
+        )
+
+        patch_height, patch_width = self.patch_size
+
+        local_heatmaps = self.local_module(
+            regions_of_interest.view(
+                batch_size * self.num_points,
+                channels,
+                patch_height,
+                patch_width
+            )
+        ).view(
+            batch_size,
+            self.num_points,
+            patch_height,
+            patch_width
+        )
+
+        local_heatmaps = self._paste_heatmaps(
+            global_heatmaps,
+            local_heatmaps,
+            point_predictions
+        )
+
+        refined_point_predictions = self._get_highest_points(
+            local_heatmaps
+        )
+
+        return global_heatmaps, local_heatmaps, refined_point_predictions
 
     def forward(self, x):
-        return self.model(x)[-1]
+        return self.forward_with_heatmaps(x)[-1]
 
     def step(
         self,
         batch: tuple[torch.Tensor, torch.Tensor]
     ):
-        images, points, target_heatmaps_full, target_heatmaps_patch = batch
+        images, targets = batch
 
         (
-            heatmaps_full,
-            heatmaps_patch,
-            point_predictions
-        ) = self.model(images)
+            global_heatmaps,
+            local_heatmaps,
+            predictions
+        ) = self.forward_with_heatmaps(images)
 
-        loss = F.l1_loss(heatmaps_full, target_heatmaps_full) + \
-            F.l1_loss(heatmaps_patch, target_heatmaps_patch)
+        target_heatmaps, mask = self._create_heatmaps(targets)
 
-        return loss, point_predictions
+        loss = F.l1_loss(
+            global_heatmaps,
+            target_heatmaps,
+            reduction='none'
+        ) + F.l1_loss(
+            local_heatmaps,
+            target_heatmaps,
+            reduction='none'
+        )
+
+        masked_loss = loss * mask
+
+        return masked_loss.mean(), predictions
 
     def training_step(
         self,
@@ -275,7 +279,7 @@ class YaoLandmarkDetection(
         loss, predictions = self.step(batch)
         targets = batch[1]
 
-        _, unreduced_mm_error = self.loss(
+        _, unreduced_mm_error = self.mm_error(
             predictions,
             targets,
             with_mm_error=True

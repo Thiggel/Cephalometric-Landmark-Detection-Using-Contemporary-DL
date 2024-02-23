@@ -68,6 +68,7 @@ def run(args: dict, seed: int = 42) -> dict:
         'model_name': args.model_name,
         'point_ids': datamodule.dataset.point_ids,
         'model_size': args.model_size,
+        'resize_to': model_type.resize_to,
     }
 
     model = model_type.initialize(**model_args)

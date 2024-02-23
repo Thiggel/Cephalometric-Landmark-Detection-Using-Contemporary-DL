@@ -31,7 +31,7 @@ class ModelTypes(Enum):
             ModelTypes.Kim: ModelType(
                 name='Kim',
                 crop=True,
-                resize_to=(600, 600),#(1360, 1360),
+                resize_to=(448, 448),#(1360, 1360),
                 resize_points_to_aspect_ratio=(256, 256),
                 model=KimLandmarkDetection
             ),
@@ -53,7 +53,7 @@ class ModelTypes(Enum):
                 name='Yao',
                 crop=False,
                 resize_to=(576, 512),
-                resize_points_to_aspect_ratio=(576, 512),
+                resize_points_to_aspect_ratio=(256, 256),
                 model=YaoLandmarkDetection
             ),
         }

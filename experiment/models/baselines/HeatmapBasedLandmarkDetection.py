@@ -258,7 +258,11 @@ class HeatmapBasedLandmarkDetection:
         for i in range(batch_size):
             for j in range(num_points):
                 x, y = coords[i, j]
-                patch = self._extract_patch(images[i], x, y)
+
+                image = images[i] if images.size(1) == 1 \
+                    else images[i, j]
+
+                patch = self._extract_patch(image, x, y)
                 patches[i, j] = patch
 
         return patches.unsqueeze(2)
