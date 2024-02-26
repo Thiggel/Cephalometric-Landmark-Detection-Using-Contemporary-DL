@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.optim import RMSprop
 from torch.optim.lr_scheduler import ExponentialLR
-from torchvision.transforms.functional import resize
+import torch.nn.functional as F
 import lightning as L
 
 from models.losses.MaskedWingLoss import MaskedWingLoss
@@ -24,8 +24,9 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
     ):
         super().__init__()
 
-        self.patch_size = torch.tensor(resize_to)
-        self.resize_to = torch.tensor(resize_to)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.patch_size = torch.tensor(resize_to, device=device)
+        self.resize_to = torch.tensor(resize_to, device=device)
         self.original_image_size = original_image_size
         self.patch_resize_to = self._get_patch_resize_to()
         self.num_points = num_points
@@ -58,7 +59,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
         self,
         x: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        resized = resize(x, self.resize_to)  # batch_size, 1, 256, 256
+        resized = F.interpolate(x, size=self.resize_to.tolist())  # batch_size, 1, 256, 256
 
         return self.forward_batch(resized, resized.shape[-2:])
 
@@ -68,7 +69,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
         return predictions
 
     def training_step(self, batch, batch_idx):
-        loss, _ = self.step(batch, batch_idx)
+        loss, _ = self.step(batch)
 
         self.log('train_loss', loss)
 

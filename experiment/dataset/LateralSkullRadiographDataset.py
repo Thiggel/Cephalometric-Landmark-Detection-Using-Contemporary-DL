@@ -34,6 +34,7 @@ class LateralSkullRadiographDataset(Dataset):
         self.data_frame = pd.read_csv(
             os.path.join(root_dir, csv_file),
         )
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.root_dir = root_dir
         self.crop = crop
         self.resize = transforms.Resize(resize_to)
@@ -277,4 +278,4 @@ class LateralSkullRadiographDataset(Dataset):
                 points,
             )
 
-        return image, points
+        return image.to(self.device), points.to(self.device)

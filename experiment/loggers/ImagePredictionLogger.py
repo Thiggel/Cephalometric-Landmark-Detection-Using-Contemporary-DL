@@ -27,8 +27,8 @@ class ImagePredictionLogger(Callback):
 
         preds = pl_module(images)
 
-        preds = self._clamp_points(preds, images)
-        targets = self._clamp_points(targets, images)
+        preds = self._clamp_points(preds, images).cpu().numpy()
+        targets = self._clamp_points(targets, images).cpu().numpy()
 
         images = images.permute(0, 2, 3, 1).cpu().numpy()
 

@@ -1,9 +1,14 @@
 import torch
 from torchvision.transforms.functional import resize
 import torch.nn.functional as F
+import gc
 
 
 class HeatmapBasedLandmarkDetection:
+    @property
+    def device(self) -> torch.device:
+        return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
     def _get_highest_points(
         self,
         heatmaps: torch.Tensor
@@ -111,23 +116,24 @@ class HeatmapBasedLandmarkDetection:
 
         mask = (points[..., 0] >= 0) & (points[..., 1] >= 0)
 
-        y_grid, x_grid = torch.meshgrid(
-            torch.arange(self.resize_to[0]),
-            torch.arange(self.resize_to[1]),
-        )
+        if not hasattr(self, 'x_grid') or not hasattr(self, 'y_grid'):
+            self.y_grid, self.x_grid = torch.meshgrid(
+                torch.arange(self.resize_to[0], device=self.device),
+                torch.arange(self.resize_to[1], device=self.device),
+            )
 
-        y_grid = y_grid.unsqueeze(0).unsqueeze(0)
-        x_grid = x_grid.unsqueeze(0).unsqueeze(0)
+            self.y_grid = self.y_grid.unsqueeze(0).unsqueeze(0)
+            self.x_grid = self.x_grid.unsqueeze(0).unsqueeze(0)
 
         x, y = points.split(1, dim=-1)
         x = x.unsqueeze(-1)
         y = y.unsqueeze(-1)
 
-        heatmaps = torch.exp(
-            -0.5 * ((y_grid - y) ** 2 + (x_grid - x) ** 2) / (gaussian_sd ** 2)
+        self.heatmaps = torch.exp(
+            -0.5 * ((self.y_grid - y) ** 2 + (self.x_grid - x) ** 2) / (gaussian_sd ** 2)
         )
 
-        return heatmaps, mask.unsqueeze(-1).unsqueeze(-1)
+        return self.heatmaps, mask.unsqueeze(-1).unsqueeze(-1)
 
     def _get_patch_resize_to(self) -> torch.Tensor:
         """
@@ -145,7 +151,10 @@ class HeatmapBasedLandmarkDetection:
             int(resize_factor * self.resize_to[1])
         )
 
-        return torch.tensor(patch_resize_to)
+        return torch.tensor(
+            patch_resize_to,
+            device=self.device
+        )
 
     def _calculate_bounding_boxes(
         self,
@@ -229,9 +238,12 @@ class HeatmapBasedLandmarkDetection:
             image.shape[-2:]
         )
 
-        patch = torch.zeros(*self.patch_size)
+        self.patch = torch.zeros(
+            *self.patch_size,
+            device=self.device
+        )
 
-        patch[
+        self.patch[
             patch_y1:patch_y2,
             patch_x1:patch_x2,
         ] = image[
@@ -240,7 +252,7 @@ class HeatmapBasedLandmarkDetection:
             image_x1:image_x2,
         ]
 
-        return patch
+        return self.patch
 
     def _extract_patches(
         self,
@@ -249,25 +261,28 @@ class HeatmapBasedLandmarkDetection:
     ) -> torch.Tensor:
         batch_size, num_points, _ = coords.shape
 
-        patches = torch.zeros(
+        self.patches = torch.zeros(
             batch_size,
             num_points,
-            *self.patch_size
+            *self.patch_size,
+            device=self.device
         )
 
         for i in range(batch_size):
             for j in range(num_points):
                 x, y = coords[i, j]
-                patch = self._extract_patch(images[i], x, y)
-                patches[i, j] = patch
+                self.patches[i, j] = self._extract_patch(images[i], x, y)
 
-        return patches.unsqueeze(2)
+        return self.patches.unsqueeze(2)
 
     def forward_batch(
         self,
         images: torch.Tensor,
         patch_size: tuple[int, int],
     ) -> torch.Tensor:
+        torch.cuda.empty_cache()
+        gc.collect()
+
         batch_size, channels, _, _ = images.shape
 
         global_heatmaps = self.global_module(
@@ -308,7 +323,30 @@ class HeatmapBasedLandmarkDetection:
             local_heatmaps
         )
 
+        del (
+            regions_of_interest,
+            point_predictions,
+        )
+
+        self._free_memory()
+
         return global_heatmaps, local_heatmaps, refined_point_predictions
+
+    def _free_memory(self):
+        if hasattr(self, 'patches'):
+            del self.patches
+
+        if hasattr(self, 'patch'):
+            self.patch
+
+        if hasattr(self, 'heatmaps'):
+            self.heatmaps
+
+        if hasattr(self, 'x_grid'):
+            self.x_grid
+
+        if hasattr(self, 'y_grid'):
+            self.y_grid
 
     def step(
         self,

@@ -13,9 +13,10 @@ class MaskedWingLoss(nn.Module):
     ):
         super().__init__()
 
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.w = w
         self.epsilon = epsilon
-        self.C = w - w * torch.tensor(1 + w / epsilon).log()
+        self.C = w - w * torch.tensor(1 + w / epsilon, device=self.device).log()
 
         self.px_per_m = self._get_px_per_m(
             old_px_per_m=old_px_per_m,
@@ -29,10 +30,10 @@ class MaskedWingLoss(nn.Module):
         original_image_size: tuple[int, int],
         resize_to: tuple[int, int],
     ) -> torch.Tensor:
-        old_px_per_m = torch.tensor(old_px_per_m)
-        original_image_size = torch.tensor(original_image_size)
+        old_px_per_m = torch.tensor(old_px_per_m, device=self.device)
+        original_image_size = torch.tensor(original_image_size, device=self.device)
         original_image_size_m = original_image_size / old_px_per_m
-        resize_to = torch.tensor(resize_to)
+        resize_to = torch.tensor(resize_to, device=self.device)
         new_px_per_m = original_image_size_m / resize_to
 
         return new_px_per_m

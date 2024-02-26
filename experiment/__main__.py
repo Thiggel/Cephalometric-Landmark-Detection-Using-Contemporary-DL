@@ -15,6 +15,9 @@ from dataset.LateralSkullRadiographDataModule import \
         LateralSkullRadiographDataModule
 from models.CephalometricLandmarkDetector import CephalometricLandmarkDetector
 from models.ModelTypes import ModelTypes
+import torch.multiprocessing as mp
+mp.set_start_method('spawn')
+
 
 
 def get_args() -> dict:
@@ -55,7 +58,6 @@ def get_model_name(module: L.LightningModule) -> str:
         return module.__class__.__name__
 
     return module.model.__class__.__name__
-
 
 def run(args: dict, seed: int = 42) -> dict:
     set_seed(seed)
@@ -115,7 +117,7 @@ def run(args: dict, seed: int = 42) -> dict:
 
     if args.checkpoint:
         print(f'Loading checkpoint {args.checkpoint}...')
-        model = CephalometricLandmarkDetector.load_from_checkpoint(
+        model = model_type.model.load_from_checkpoint(
             args.checkpoint
         )
         print('Done!')
@@ -123,7 +125,7 @@ def run(args: dict, seed: int = 42) -> dict:
     if not args.test_only:
         trainer.fit(model=model, datamodule=datamodule)
 
-        model = CephalometricLandmarkDetector.load_from_checkpoint(
+        model = model_type.model.load_from_checkpoint(
             trainer.checkpoint_callback.best_model_path
         )
 

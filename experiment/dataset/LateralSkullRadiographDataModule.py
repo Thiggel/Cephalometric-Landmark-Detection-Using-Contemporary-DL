@@ -36,7 +36,7 @@ class LateralSkullRadiographDataModule(L.LightningDataModule):
 
         self.batch_size = batch_size
 
-        self.num_workers = os.cpu_count() if torch.cuda.is_available() else 0
+        self.num_workers = 0 if torch.cuda.is_available() else 0
 
     def _get_splits(
         self,
@@ -55,19 +55,22 @@ class LateralSkullRadiographDataModule(L.LightningDataModule):
             self.train_dataset,
             batch_size=self.batch_size,
             shuffle=True,
-            num_workers=self.num_workers
+            num_workers=self.num_workers,
+            #persistent_workers=True
         )
 
     def val_dataloader(self) -> DataLoader:
         return DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
-            num_workers=self.num_workers
+            num_workers=self.num_workers,
+            #persistent_workers=True
         )
 
     def test_dataloader(self) -> DataLoader:
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
-            num_workers=self.num_workers
+            num_workers=self.num_workers,
+            #persistent_workers=True
         )
