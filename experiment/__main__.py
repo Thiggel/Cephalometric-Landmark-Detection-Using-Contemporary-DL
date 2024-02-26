@@ -104,6 +104,7 @@ def run(args: dict, seed: int = 42) -> dict:
     stats_monitor = DeviceStatsMonitor()
 
     trainer = L.Trainer(
+        max_time={'hours': 3.5},
         max_epochs=10_000,
         callbacks=[checkpoint_callback, early_stopping_callback, image_logger, stats_monitor],
         enable_checkpointing=True,
