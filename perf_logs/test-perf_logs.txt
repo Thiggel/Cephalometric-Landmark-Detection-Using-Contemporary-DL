@@ -1,0 +1,27 @@
+TEST Profiler Report
+Profile stats for: records
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                          ProfilerStep*         0.05%       3.516ms       100.00%        6.685s        2.228s             3  
+[pl][profile][Strategy]SingleDeviceStrategy.test_ste...         0.28%      18.930ms        98.59%        6.591s        2.197s             3  
+                      [pl][module]models.ViT.ViT: model         0.12%       7.753ms        98.17%        6.563s        2.188s             3  
+[pl][module]transformers.models.vit.modeling_vit.ViT...         0.09%       5.775ms        97.60%        6.525s        2.175s             3  
+[pl][module]transformers.models.vit.modeling_vit.ViT...         0.36%      24.119ms        95.97%        6.416s        2.139s             3  
+                                           aten::linear         0.06%       4.162ms        54.01%        3.611s      16.265ms           222  
+                                            aten::addmm        47.12%        3.150s        53.89%        3.603s      16.229ms           222  
+                                           aten::matmul         1.23%      82.138ms        12.64%     845.213ms      11.739ms            72  
+[pl][module]transformers.models.vit.modeling_vit.ViT...         0.31%      20.766ms        11.59%     774.961ms     258.320ms             3  
+                                            aten::copy_        10.61%     709.421ms        10.61%     709.421ms     425.823us          1666  
+[pl][module]transformers.models.vit.modeling_vit.ViT...         0.27%      17.950ms         9.99%     668.077ms     222.692ms             3  
+[pl][module]transformers.models.vit.modeling_vit.ViT...         0.28%      18.886ms         9.80%     655.118ms     218.373ms             3  
+[pl][module]transformers.models.vit.modeling_vit.ViT...         0.27%      17.860ms         9.40%     628.174ms     209.391ms             3  
+[pl][module]transformers.models.vit.modeling_vit.ViT...         0.25%      16.423ms         8.15%     545.068ms     181.689ms             3  
+[pl][module]transformers.models.vit.modeling_vit.ViT...         0.27%      18.331ms         7.49%     500.623ms     166.874ms             3  
+                                            aten::clone        -0.00%     -95.000us         7.48%     499.832ms       1.265ms           395  
+[pl][module]transformers.models.vit.modeling_vit.ViT...         0.24%      16.052ms         7.21%     482.020ms     160.673ms             3  
+[pl][module]transformers.models.vit.modeling_vit.ViT...         0.26%      17.681ms         6.93%     463.352ms     154.451ms             3  
+[pl][module]transformers.models.vit.modeling_vit.ViT...         0.23%      15.480ms         6.34%     423.740ms     141.247ms             3  
+[pl][module]transformers.models.vit.modeling_vit.ViT...         0.25%      16.834ms         6.31%     422.104ms     140.701ms             3  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 6.685s

@@ -90,3 +90,22 @@ class MaskedWingLoss(nn.Module):
         ) if with_mm_error else None
 
         return masked_loss, masked_unreduced_mm_error
+
+    def percent_under_n_mm(
+        self,
+        predictions: torch.Tensor,
+        targets: torch.Tensor,
+        n_mm: int
+    ) -> torch.Tensor:
+        m_to_mm = 1000
+        difference = predictions - targets
+        difference_mm = difference * self.px_per_m * m_to_mm
+        magnitude = self.difference_to_magnitude(difference_mm)
+
+        mask = (targets > 0).prod(-1)
+        masked_magnitude = magnitude * mask
+
+        under_n_mm = (masked_magnitude < n_mm).sum().float()
+        total = mask.sum().float()
+
+        return under_n_mm / total

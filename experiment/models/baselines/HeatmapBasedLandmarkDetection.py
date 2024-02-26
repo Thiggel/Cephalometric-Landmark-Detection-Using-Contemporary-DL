@@ -327,11 +327,9 @@ class HeatmapBasedLandmarkDetection:
         loss = self.loss(
             global_heatmaps,
             target_heatmaps,
-            reduction='none'
         ) + self.loss(
             local_heatmaps,
             target_heatmaps,
-            reduction='none'
         )
 
         masked_loss = loss * mask
@@ -351,4 +349,4 @@ class HeatmapBasedLandmarkDetection:
             with_mm_error=True
         )
 
-        return loss, unreduced_mm_error
+        return loss, unreduced_mm_error, predictions, targets

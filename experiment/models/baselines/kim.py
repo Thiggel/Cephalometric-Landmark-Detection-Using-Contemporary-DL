@@ -52,7 +52,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
             original_image_size=original_image_size,
             resize_to=resize_to
         )
-        self.loss = nn.BCEWithLogitsLoss()
+        self.loss = nn.BCEWithLogitsLoss(reduction='none')
 
     def forward_with_heatmaps(
         self,
@@ -75,7 +75,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        loss, unreduced_mm_error = self.validation_test_step(batch)
+        loss, unreduced_mm_error, _, _ = self.validation_test_step(batch)
 
         self.log('val_loss', loss, prog_bar=True)
         self.log('val_mm_error', unreduced_mm_error.mean(), prog_bar=True)
@@ -83,13 +83,35 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
         return loss
 
     def test_step(self, batch, batch_idx):
-        loss, unreduced_mm_error = self.validation_test_step(batch)
+        (
+            loss,
+            unreduced_mm_error,
+            predictions,
+            targets
+        ) = self.validation_test_step(batch)
 
         for (id, point_id) in enumerate(self.point_ids):
             self.log(f'{point_id}_mm_error', unreduced_mm_error[id].mean())
 
         self.log('test_loss', loss, prog_bar=True)
         self.log('test_mm_error', unreduced_mm_error.mean(), prog_bar=True)
+
+        self.log(
+            'percent_under_1mm',
+            self.mm_error.percent_under_n_mm(predictions, targets, 1)
+        )
+        self.log(
+            'percent_under_2mm',
+            self.mm_error.percent_under_n_mm(predictions, targets, 2)
+        )
+        self.log(
+            'percent_under_3mm',
+            self.mm_error.percent_under_n_mm(predictions, targets, 3)
+        )
+        self.log(
+            'percent_under_4mm',
+            self.mm_error.percent_under_n_mm(predictions, targets, 4)
+        )
 
         return loss
 

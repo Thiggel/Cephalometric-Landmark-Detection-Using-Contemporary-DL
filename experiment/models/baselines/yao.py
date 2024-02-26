@@ -178,7 +178,7 @@ class YaoLandmarkDetection(
         self.global_module = GlobalDetectionModule(num_points)
         self.local_module = LocalCorrectionModule()
 
-        self.loss = nn.L1Loss()
+        self.loss = nn.L1Loss(reduction='none')
         self.mm_error = MaskedWingLoss()
 
     def forward_with_heatmaps(
@@ -207,35 +207,44 @@ class YaoLandmarkDetection(
 
         return loss
 
-    def validation_step(
-        self,
-        batch: tuple[torch.Tensor, torch.Tensor],
-        batch_idx: int
-    ) -> torch.Tensor:
-        loss, unreduced_mm_error = self.validation_test_step(batch)
+    def validation_step(self, batch, batch_idx):
+        loss, unreduced_mm_error, _, _ = self.validation_test_step(batch)
 
-        self.log('val_loss', loss, prog_bar=True, on_epoch=True)
-        self.log(
-            'val_mm_error',
-            unreduced_mm_error.mean(),
-            prog_bar=True,
-            on_epoch=True
-        )
+        self.log('val_loss', loss, prog_bar=True)
+        self.log('val_mm_error', unreduced_mm_error.mean(), prog_bar=True)
 
         return loss
 
-    def test_step(
-        self,
-        batch: tuple[torch.Tensor, torch.Tensor],
-        batch_idx: int
-    ) -> torch.Tensor:
-        loss, unreduced_mm_error = self.validation_test_step(batch)
+    def test_step(self, batch, batch_idx):
+        (
+            loss,
+            unreduced_mm_error,
+            predictions,
+            targets
+        ) = self.validation_test_step(batch)
 
         for (id, point_id) in enumerate(self.point_ids):
             self.log(f'{point_id}_mm_error', unreduced_mm_error[id].mean())
 
         self.log('test_loss', loss, prog_bar=True)
         self.log('test_mm_error', unreduced_mm_error.mean(), prog_bar=True)
+
+        self.log(
+            'percent_under_1mm',
+            self.mm_error.percent_under_n_mm(predictions, targets, 1)
+        )
+        self.log(
+            'percent_under_2mm',
+            self.mm_error.percent_under_n_mm(predictions, targets, 2)
+        )
+        self.log(
+            'percent_under_3mm',
+            self.mm_error.percent_under_n_mm(predictions, targets, 3)
+        )
+        self.log(
+            'percent_under_4mm',
+            self.mm_error.percent_under_n_mm(predictions, targets, 4)
+        )
 
         return loss
 

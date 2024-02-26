@@ -54,7 +54,7 @@ class ImagePredictionLogger(Callback):
         trainer.logger.experiment.add_image(
             'predictions_vs_targets',
             image,
-            global_step=trainer.global_step
+            global_step=1
         )
 
         plt.close(fig)

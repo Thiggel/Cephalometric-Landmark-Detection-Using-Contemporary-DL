@@ -1,9 +1,12 @@
 from datetime import date
 import argparse
 import lightning as L
-from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
+from lightning.pytorch.callbacks import (
+        ModelCheckpoint,
+        EarlyStopping,
+        DeviceStatsMonitor
+    )
 from lightning.pytorch.loggers import TensorBoardLogger
-from lightning.pytorch.profilers import PyTorchProfiler
 import torch
 
 from utils.set_seed import set_seed
@@ -12,7 +15,6 @@ from dataset.LateralSkullRadiographDataModule import \
         LateralSkullRadiographDataModule
 from models.CephalometricLandmarkDetector import CephalometricLandmarkDetector
 from models.ModelTypes import ModelTypes
-from models.baselines.yao import YaoLandmarkDetection
 
 
 def get_args() -> dict:
@@ -92,14 +94,13 @@ def run(args: dict, seed: int = 42) -> dict:
 
     image_logger = ImagePredictionLogger(num_samples=5)
 
-    profiler = PyTorchProfiler(dirpath="./perf_logs", filename="perf_logs")
+    stats_monitor = DeviceStatsMonitor()
 
     trainer = L.Trainer(
         max_epochs=10_000,
-        callbacks=[checkpoint_callback, early_stopping_callback, image_logger],
+        callbacks=[checkpoint_callback, early_stopping_callback, image_logger, stats_monitor],
         enable_checkpointing=True,
         logger=tensorboard_logger,
-        profiler=profiler,
         accelerator='gpu' if torch.cuda.is_available() else 'cpu',
         devices='auto'
     )

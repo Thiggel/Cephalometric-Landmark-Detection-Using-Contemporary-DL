@@ -1,8 +1,8 @@
 import lightning as L
 import torch
 from torch import nn
-from torch.optim import RMSprop, Optimizer
-from torch.optim.lr_scheduler import ReduceLROnPlateau, LRScheduler
+from torch.optim import RMSprop
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from models.ViT import ViT
 from models.ConvNextV2 import ConvNextV2
@@ -56,14 +56,14 @@ class CephalometricLandmarkDetector(L.LightningModule):
             with_mm_error=with_mm_error,
         )
 
-        return loss, unreduced_mm_error
+        return loss, unreduced_mm_error, predictions, targets
 
     def training_step(
         self,
         batch: tuple[torch.Tensor, torch.Tensor],
         batch_idx: int
     ):
-        loss, _ = self.step(batch)
+        loss, _, _, _ = self.step(batch)
 
         self.log(
             'train_loss',
@@ -80,7 +80,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
         batch: tuple[torch.Tensor, torch.Tensor],
         batch_idx: int
     ):
-        loss, mm_error = self.step(batch, with_mm_error=True)
+        loss, mm_error, _, _ = self.step(batch, with_mm_error=True)
 
         mm_error = mm_error.mean()
 
@@ -94,7 +94,12 @@ class CephalometricLandmarkDetector(L.LightningModule):
         batch: tuple[torch.Tensor, torch.Tensor],
         batch_idx: int
     ):
-        loss, mm_error = self.step(batch, with_mm_error=True)
+        (
+            loss,
+            mm_error,
+            predictions,
+            targets
+        ) = self.step(batch, with_mm_error=True)
 
         for (id, point_id) in enumerate(self.point_ids):
             self.log(f'{point_id}_mm_error', mm_error[id].mean())
@@ -103,6 +108,23 @@ class CephalometricLandmarkDetector(L.LightningModule):
 
         self.log('test_loss', loss, prog_bar=True)
         self.log('test_mm_error', mm_error, prog_bar=True)
+
+        self.log(
+            'percent_under_1mm',
+            self.loss.percent_under_n_mm(predictions, targets, 1)
+        )
+        self.log(
+            'percent_under_2mm',
+            self.loss.percent_under_n_mm(predictions, targets, 2)
+        )
+        self.log(
+            'percent_under_3mm',
+            self.loss.percent_under_n_mm(predictions, targets, 3)
+        )
+        self.log(
+            'percent_under_4mm',
+            self.loss.percent_under_n_mm(predictions, targets, 4)
+        )
 
         return loss
 
