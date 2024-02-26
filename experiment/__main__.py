@@ -38,6 +38,12 @@ def get_args() -> dict:
     parser.add_argument('--checkpoint', type=str, default=None)
     parser.add_argument('--test_only', action=argparse.BooleanOptionalAction)
     parser.add_argument('--num_runs', type=int, default=1)
+    parser.add_argument(
+        '--optimizer',
+        type=str,
+        default='adam',
+        choices=['adam', 'sgd', 'rmsprop', 'sgd_momentum']
+    )
 
     args = parser.parse_args()
 
@@ -71,6 +77,7 @@ def run(args: dict, seed: int = 42) -> dict:
         'point_ids': datamodule.dataset.point_ids,
         'model_size': args.model_size,
         'resize_to': model_type.resize_to,
+        'optimizer': args.optimizer,
     }
 
     model = model_type.initialize(**model_args)

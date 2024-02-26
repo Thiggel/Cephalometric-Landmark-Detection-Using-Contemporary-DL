@@ -1,7 +1,7 @@
 import lightning as L
 import torch
 from torch import nn
-from torch.optim import RMSprop
+from torch.optim import RMSprop, Adam, SGD
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from models.ViT import ViT
@@ -16,6 +16,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
         point_ids: list[str],
         reduce_lr_patience: int = 25,
         model_size: str = 'tiny',
+        optimizer: str = 'adam',
         *args,
         **kwargs
     ):
@@ -27,6 +28,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
         self.reduce_lr_patience = reduce_lr_patience
         self.model = self._init_model(model_name)
         self.point_ids = point_ids
+        self.optimizer_name = optimizer
 
         self.loss = MaskedWingLoss()
 
@@ -128,8 +130,22 @@ class CephalometricLandmarkDetector(L.LightningModule):
 
         return loss
 
+    def get_optimizer(self, optimizer: str) -> torch.optim.Optimizer:
+        optimizers = {
+            'adam': lambda: Adam(self.parameters(), lr=0.001),
+            'rmsprop': lambda: RMSprop(self.parameters(), lr=0.001),
+            'sgd': lambda: SGD(self.parameters(), lr=0.001),
+            'sgd_momentum': lambda: SGD(
+                self.parameters(),
+                lr=0.001,
+                momentum=0.9
+            ),
+        }
+
+        return optimizers[optimizer]()
+
     def configure_optimizers(self) -> dict:
-        optimizer = RMSprop(self.parameters(), lr=0.001)
+        optimizer = self.get_optimizer(self.optimizer_name)
         scheduler = ReduceLROnPlateau(
             optimizer,
             patience=self.reduce_lr_patience
