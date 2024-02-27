@@ -163,4 +163,4 @@ dataset/*
 checkpoints/*
 
 events.out.*
-*.pt
+logs/*

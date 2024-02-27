@@ -1,7 +1,6 @@
 import torch
 from torchvision.transforms.functional import resize
 import torch.nn.functional as F
-import gc
 
 
 class HeatmapBasedLandmarkDetection:
@@ -275,14 +274,56 @@ class HeatmapBasedLandmarkDetection:
 
         return self.patches.unsqueeze(2)
 
+    def _run_local_module_sequentially(
+        self,
+        regions_of_interest: torch.Tensor,
+        batch_size_per_iteration: int = 1,
+    ) -> torch.Tensor:
+        (
+            batch_size,
+            num_points,
+            channels,
+            patch_height,
+            patch_width
+        ) = regions_of_interest.shape
+
+        total_iterations = (
+            (batch_size + batch_size_per_iteration - 1)
+            //
+            batch_size_per_iteration
+        )
+
+        local_heatmaps_list = []
+        for i in range(total_iterations):
+            start_idx = i * batch_size_per_iteration
+            end_idx = min((i + 1) * batch_size_per_iteration, batch_size)
+            batch_regions_of_interest = regions_of_interest[start_idx:end_idx]
+
+            local_heatmaps_batch = self.local_module(
+                batch_regions_of_interest.view(
+                    (end_idx - start_idx) * self.num_points,
+                    channels,
+                    patch_height,
+                    patch_width
+                )
+            ).view(
+                end_idx - start_idx,
+                self.num_points,
+                patch_height,
+                patch_width
+            )
+
+            local_heatmaps_list.append(local_heatmaps_batch)
+
+        local_heatmaps = torch.cat(local_heatmaps_list, dim=0) 
+
+        return local_heatmaps
+
     def forward_batch(
         self,
         images: torch.Tensor,
         patch_size: tuple[int, int],
     ) -> torch.Tensor:
-        torch.cuda.empty_cache()
-        gc.collect()
-
         batch_size, channels, _, _ = images.shape
 
         global_heatmaps = self.global_module(

@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+import gc
 
 
 class HourglassBlock(nn.Sequential):
@@ -49,17 +50,12 @@ class HourglassNet(nn.Module):
     def forward(self, x):
         features = []
 
-        print('Downsampling')
         for i in range(self.num_blocks):
-            print(x.shape)
             x = self.down_blocks[i](x)
             features.append(x)
             x = self.max_pool(x)
-            print(x.shape, '\n')
 
-        print('Upsampling')
         for i in range(self.num_blocks):
-            print(x.shape)
             x = (
                 F.interpolate(
                     self.up_blocks[i](x),
@@ -70,7 +66,5 @@ class HourglassNet(nn.Module):
                     features[self.num_blocks - i - 1]
                 )
             )
-            print(x.shape)
-        print('Done\n')
 
         return x
