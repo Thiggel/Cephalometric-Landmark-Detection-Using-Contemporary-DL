@@ -49,25 +49,27 @@ class HourglassNet(nn.Module):
     def forward(self, x):
         features = []
 
+        print('Downsampling')
         for i in range(self.num_blocks):
+            print(x.shape)
             x = self.down_blocks[i](x)
             features.append(x)
             x = self.max_pool(x)
+            print(x.shape + '\n')
 
+        print('Upsampling')
         for i in range(self.num_blocks):
-            x = self.up_blocks[i](x)
-            x = self.upsample(x)
-            skip_connection = self.skip_connections[i](
-                features[self.num_blocks - i - 1]
+            print(x.shape)
+            x = (
+                self.upsample(
+                    self.up_blocks[i](x)
+                )
+                +
+                self.skip_connections[i](
+                    features[self.num_blocks - i - 1]
+                )
             )
-            x = x + skip_connection
-
-            # Detach and clear unnecessary tensors
-            if i < self.num_blocks - 1:
-                features[self.num_blocks - i - 2] = features[self.num_blocks - i - 2].detach()
-                del features[self.num_blocks - i - 2]
-
-        del features[:]
-        torch.cuda.empty_cache()
+            print(x.shape)
+        print('Done\n')
 
         return x
