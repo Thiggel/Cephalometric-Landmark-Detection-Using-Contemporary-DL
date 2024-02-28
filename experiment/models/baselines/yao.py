@@ -195,7 +195,7 @@ class YaoLandmarkDetection(
         batch: tuple[torch.Tensor, torch.Tensor],
         batch_idx: int
     ) -> torch.Tensor:
-        loss, _ = self.step(batch)
+        loss, _, _,  _, _ = self.step(batch)
 
         self.log(
             'train_loss',

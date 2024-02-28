@@ -1,34 +1,27 @@
 import matplotlib.pyplot as plt
 import torch
-from lightning import Callback
+from lightning import Callback, Trainer, LightningModule
+
+from utils.clamp_points import clamp_points
 
 
 class ImagePredictionLogger(Callback):
-    def __init__(self, num_samples):
+    def __init__(self, num_samples: int):
         super().__init__()
         self.num_samples = num_samples
 
-    def _clamp_points(
+    def on_validation_epoch_start(
         self,
-        points: torch.Tensor,
-        images: torch.Tensor
-    ) -> torch.Tensor:
-        image_height, image_width = images.shape[-1], images.shape[-2]
-
-        points = torch.clamp(points, min=0)
-        points[..., 0] = torch.clamp(points[..., 0], max=image_width)
-        points[..., 1] = torch.clamp(points[..., 1], max=image_height)
-
-        return points
-
-    def on_validation_epoch_start(self, trainer, pl_module):
+        trainer: Trainer,
+        pl_module: LightningModule
+    ) -> None:
         images, targets = next(iter(trainer.datamodule.val_dataloader()))
         images = images[:self.num_samples]
 
         preds = pl_module(images)
 
-        preds = self._clamp_points(preds, images).cpu().numpy()
-        targets = self._clamp_points(targets, images).cpu().numpy()
+        preds = clamp_points(preds, images).cpu().numpy()
+        targets = clamp_points(targets, images).cpu().numpy()
 
         images = images.permute(0, 2, 3, 1).cpu().numpy()
 

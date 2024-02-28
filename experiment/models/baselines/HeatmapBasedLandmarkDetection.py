@@ -1,5 +1,4 @@
 import torch
-from torchvision.transforms.functional import resize
 import torch.nn.functional as F
 
 
@@ -55,13 +54,15 @@ class HeatmapBasedLandmarkDetection:
         global heatmap at the respective position of the refined
         point prediction.
         """
-        resized_local_heatmaps = resize(
+        resized_local_heatmaps = F.interpolate(
             local_heatmaps,
             self.patch_resize_to,
         )
 
         batch_size, num_points, _ = point_predictions.shape
         patch_height, patch_width = self.patch_resize_to
+
+        final_heatmaps = global_heatmaps.clone()
 
         for datapoint_idx in range(batch_size):
             for point_idx in range(num_points):
@@ -84,7 +85,7 @@ class HeatmapBasedLandmarkDetection:
                     self.resize_to
                 )
 
-                global_heatmaps[
+                final_heatmaps[
                     datapoint_idx,
                     point_idx,
                     image_y1:image_y2,
@@ -96,7 +97,8 @@ class HeatmapBasedLandmarkDetection:
                     patch_x1:patch_x2,
                 ]
 
-        return global_heatmaps
+
+        return final_heatmaps
 
     def _create_heatmaps(
         self,
@@ -364,30 +366,7 @@ class HeatmapBasedLandmarkDetection:
             local_heatmaps
         )
 
-        del (
-            regions_of_interest,
-            point_predictions,
-        )
-
-        self._free_memory()
-
         return global_heatmaps, local_heatmaps, refined_point_predictions
-
-    def _free_memory(self):
-        if hasattr(self, 'patches'):
-            del self.patches
-
-        if hasattr(self, 'patch'):
-            self.patch
-
-        if hasattr(self, 'heatmaps'):
-            self.heatmaps
-
-        if hasattr(self, 'x_grid'):
-            self.x_grid
-
-        if hasattr(self, 'y_grid'):
-            self.y_grid
 
     def step(
         self,
@@ -398,7 +377,7 @@ class HeatmapBasedLandmarkDetection:
         (
             global_heatmaps,
             local_heatmaps,
-            predictions
+            predictions,
         ) = self.forward_with_heatmaps(images)
 
         target_heatmaps, mask = self._create_heatmaps(targets)
@@ -413,13 +392,19 @@ class HeatmapBasedLandmarkDetection:
 
         masked_loss = loss * mask
 
-        return masked_loss.mean(), predictions
+        return (
+            masked_loss.mean(),
+            predictions,
+            global_heatmaps,
+            local_heatmaps,
+            target_heatmaps
+        )
 
     def validation_test_step(
         self,
         batch: tuple[torch.Tensor, torch.Tensor],
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        loss, predictions = self.step(batch)
+        loss, predictions, _, _, _ = self.step(batch)
         targets = batch[1]
 
         _, unreduced_mm_error = self.mm_error(

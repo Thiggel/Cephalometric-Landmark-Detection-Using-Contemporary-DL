@@ -69,7 +69,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
         return predictions
 
     def training_step(self, batch, batch_idx):
-        loss, _ = self.step(batch)
+        loss, _, _, _, _ = self.step(batch)
 
         self.log('train_loss', loss)
 

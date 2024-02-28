@@ -8,16 +8,18 @@ from lightning.pytorch.callbacks import (
     )
 from lightning.pytorch.loggers import TensorBoardLogger
 import torch
+import torch.multiprocessing as mp
 
 from utils.set_seed import set_seed
 from loggers.ImagePredictionLogger import ImagePredictionLogger
+from loggers.HeatmapPredictionLogger import HeatmapPredictionLogger
 from dataset.LateralSkullRadiographDataModule import \
-        LateralSkullRadiographDataModule
-from models.CephalometricLandmarkDetector import CephalometricLandmarkDetector
+    LateralSkullRadiographDataModule
 from models.ModelTypes import ModelTypes
-import torch.multiprocessing as mp
-mp.set_start_method('spawn')
+from models.baselines.HeatmapBasedLandmarkDetection import \
+    HeatmapBasedLandmarkDetection
 
+mp.set_start_method('spawn')
 
 
 def get_args() -> dict:
@@ -41,6 +43,7 @@ def get_args() -> dict:
     parser.add_argument('--checkpoint', type=str, default=None)
     parser.add_argument('--test_only', action=argparse.BooleanOptionalAction)
     parser.add_argument('--num_runs', type=int, default=1)
+    parser.add_argument('--max_hours_per_run', type=int, default=5)
     parser.add_argument(
         '--optimizer',
         type=str,
@@ -102,13 +105,24 @@ def run(args: dict, seed: int = 42) -> dict:
     )
 
     image_logger = ImagePredictionLogger(num_samples=5)
+    heatmap_logger = HeatmapPredictionLogger(num_samples=5)
 
     stats_monitor = DeviceStatsMonitor()
 
+    callbacks = [
+        checkpoint_callback,
+        early_stopping_callback,
+        image_logger,
+        stats_monitor
+    ]
+
+    if isinstance(model, HeatmapBasedLandmarkDetection):
+        callbacks.append(heatmap_logger)
+
     trainer = L.Trainer(
-        max_time={'hours': 3.5},
+        max_time={'hours': args.max_hours_per_run},
         max_epochs=10_000,
-        callbacks=[checkpoint_callback, early_stopping_callback, image_logger, stats_monitor],
+        callbacks=callbacks,
         enable_checkpointing=True,
         logger=tensorboard_logger,
         accelerator='gpu' if torch.cuda.is_available() else 'cpu',
