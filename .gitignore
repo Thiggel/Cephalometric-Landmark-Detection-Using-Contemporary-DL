@@ -164,3 +164,5 @@ checkpoints/*
 
 events.out.*
 logs/*
+figure.png
+figure_heatmaps.png
