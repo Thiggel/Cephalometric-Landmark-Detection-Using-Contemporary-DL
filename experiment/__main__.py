@@ -89,7 +89,7 @@ def run(args: dict, seed: int = 42) -> dict:
 
     checkpoint_callback = ModelCheckpoint(
         dirpath='checkpoints/',
-        filename='{epoch}-{val_loss:.2f}',
+        filename=model_type.name + '-' + args.model_size + '-{epoch}-{val_loss:.2f}',
         monitor='val_loss',
     )
 
