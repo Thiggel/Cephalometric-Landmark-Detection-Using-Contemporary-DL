@@ -53,7 +53,7 @@ class ModelTypes(Enum):
                 name='Yao',
                 crop=False,
                 resize_to=(576, 512),
-                resize_points_to_aspect_ratio=(256, 256),
+                resize_points_to_aspect_ratio=(576, 512),
                 model=YaoLandmarkDetection
             ),
         }
