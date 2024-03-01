@@ -257,6 +257,22 @@ class HeatmapBasedLandmarkDetection:
 
         patches = padded_images.gather(2, y_indices).gather(3, x_indices)
 
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(1, 5)
+        for image_idx in range(5):
+            ax[image_idx].imshow(images[image_idx].permute(1, 2, 0).cpu())
+            for point_idx in range(5):
+                x, y = points[image_idx, point_idx]
+                ax[image_idx].imshow(
+                    patches[image_idx, point_idx].unsqueeze(-1).cpu(),
+                    extent=(x - padding_width, x + padding_width, y - padding_height, y + padding_height),
+                    cmap='gray',
+                    alpha=0.5
+                )
+                ax[image_idx].scatter(x, y)
+
+        plt.show()
+
         return patches, y_indices, x_indices
 
     def forward_batch(
