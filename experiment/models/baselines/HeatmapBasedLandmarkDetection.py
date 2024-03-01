@@ -97,6 +97,14 @@ class HeatmapBasedLandmarkDetection:
                     patch_x1:patch_x2,
                 ]
 
+        torch.testing.assert_allclose(
+            final_heatmaps,
+            self._paste_heatmaps_efficient(
+                global_heatmaps,
+                local_heatmaps,
+                point_predictions
+            )
+        )
 
         return final_heatmaps
 
@@ -117,24 +125,23 @@ class HeatmapBasedLandmarkDetection:
 
         mask = (points[..., 0] >= 0) & (points[..., 1] >= 0)
 
-        if not hasattr(self, 'x_grid') or not hasattr(self, 'y_grid'):
-            self.y_grid, self.x_grid = torch.meshgrid(
-                torch.arange(self.resize_to[0], device=self.device),
-                torch.arange(self.resize_to[1], device=self.device),
-            )
+        y_grid, x_grid = torch.meshgrid(
+            torch.arange(self.resize_to[0], device=self.device),
+            torch.arange(self.resize_to[1], device=self.device),
+        )
 
-            self.y_grid = self.y_grid.unsqueeze(0).unsqueeze(0)
-            self.x_grid = self.x_grid.unsqueeze(0).unsqueeze(0)
+        y_grid = y_grid.unsqueeze(0).unsqueeze(0)
+        x_grid = x_grid.unsqueeze(0).unsqueeze(0)
 
         x, y = points.split(1, dim=-1)
         x = x.unsqueeze(-1)
         y = y.unsqueeze(-1)
 
-        self.heatmaps = torch.exp(
-            -0.5 * ((self.y_grid - y) ** 2 + (self.x_grid - x) ** 2) / (gaussian_sd ** 2)
+        heatmaps = torch.exp(
+            -0.5 * ((y_grid - y) ** 2 + (x_grid - x) ** 2) / (gaussian_sd ** 2)
         )
 
-        return self.heatmaps, mask.unsqueeze(-1).unsqueeze(-1)
+        return heatmaps, mask.unsqueeze(-1).unsqueeze(-1)
 
     def _get_patch_resize_to(self) -> torch.Tensor:
         """
@@ -215,111 +222,54 @@ class HeatmapBasedLandmarkDetection:
             patch_x2,
         )
 
-    def _extract_patch(
-        self,
-        image: torch.Tensor,
-        x: torch.Tensor,
-        y: torch.Tensor,
-        debug: bool = False
-    ) -> torch.Tensor:
-        (
-            image_x1,
-            image_x2,
-            image_y1,
-            image_y2,
+    def _extract_patches(self, images, points):
+        patch_height, patch_width = self.patch_size
+        # Get batch size, number of channels, height, and width of images
+        batch_size, channels, height, width = images.size()
+        _, num_points, _ = points.size()
 
-            patch_y1,
-            patch_y2,
-            patch_x1,
-            patch_x2,
-        ) = self._calculate_bounding_boxes(
-            x,
-            y,
-            self.patch_size,
-            image.shape[-2:]
-        )
+        # Calculate padding amount
+        padding_height = patch_height // 2
+        padding_width = patch_width // 2
 
-        self.patch = torch.zeros(
-            *self.patch_size,
-            device=self.device
-        )
+        # Pad images with zeros
+        padded_images = F.pad(images, (padding_width, padding_width, padding_height, padding_height)) \
+            .repeat(1, num_points, 1, 1)
 
-        self.patch[
-            patch_y1:patch_y2,
-            patch_x1:patch_x2,
-        ] = image[
-            ...,
-            image_y1:image_y2,
-            image_x1:image_x2,
-        ]
+        _, _, padded_height, padded_width = padded_images.size()
 
-        return self.patch
+        adjusted_points = points + torch.tensor([padding_width, padding_height], device=images.device)
 
-    def _extract_patches(
-        self,
-        images: torch.Tensor,
-        coords: torch.Tensor,
-    ) -> torch.Tensor:
-        batch_size, num_points, _ = coords.shape
+        y_indices = (
+            adjusted_points[:, :, 1].unsqueeze(2) +
+            torch.arange(padding_height, -padding_height, step=-1, device=images.device)
+        ).unsqueeze(-1).repeat(1, 1, 1, padded_width)
 
-        self.patches = torch.zeros(
-            batch_size,
-            num_points,
-            *self.patch_size,
-            device=self.device
-        )
+        x_indices = (
+            adjusted_points[:, :, 0].unsqueeze(2) +
+            torch.arange(-padding_width, padding_width, device=images.device)
+        ).unsqueeze(-2).repeat(1, 1, patch_height, 1)
 
-        for i in range(batch_size):
-            for j in range(num_points):
-                x, y = coords[i, j]
-                self.patches[i, j] = self._extract_patch(images[i], x, y)
+        patches = padded_images.gather(2, y_indices).gather(3, x_indices)
 
-        return self.patches.unsqueeze(2)
-
-    def _run_local_module_sequentially(
-        self,
-        regions_of_interest: torch.Tensor,
-        batch_size_per_iteration: int = 1,
-    ) -> torch.Tensor:
-        (
-            batch_size,
-            num_points,
-            channels,
-            patch_height,
-            patch_width
-        ) = regions_of_interest.shape
-
-        total_iterations = (
-            (batch_size + batch_size_per_iteration - 1)
-            //
-            batch_size_per_iteration
-        )
-
-        local_heatmaps_list = []
-        for i in range(total_iterations):
-            start_idx = i * batch_size_per_iteration
-            end_idx = min((i + 1) * batch_size_per_iteration, batch_size)
-            batch_regions_of_interest = regions_of_interest[start_idx:end_idx]
-
-            local_heatmaps_batch = self.local_module(
-                batch_regions_of_interest.view(
-                    (end_idx - start_idx) * self.num_points,
-                    channels,
-                    patch_height,
-                    patch_width
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(1, batch_size)
+        for image_idx in range(batch_size):
+            ax[image_idx].imshow(images[image_idx].permute(1, 2, 0).cpu())
+            for point_idx in range(5):
+                x, y = points[image_idx, point_idx]
+                ax[image_idx].imshow(
+                    patches[image_idx, point_idx].unsqueeze(-1).cpu(),
+                    extent=(x - padding_width, x + padding_width, y - padding_height, y + padding_height),
+                    cmap='gray',
+                    alpha=0.5
                 )
-            ).view(
-                end_idx - start_idx,
-                self.num_points,
-                patch_height,
-                patch_width
-            )
+                ax[image_idx].scatter(x, y)
 
-            local_heatmaps_list.append(local_heatmaps_batch)
+        plt.show()
+        exit()
 
-        local_heatmaps = torch.cat(local_heatmaps_list, dim=0) 
-
-        return local_heatmaps
+        return patches
 
     def forward_batch(
         self,
@@ -339,6 +289,9 @@ class HeatmapBasedLandmarkDetection:
         regions_of_interest = self._extract_patches(
             images, point_predictions
         )
+
+        print(regions_of_interest.shape)
+        exit()
 
         patch_height, patch_width = patch_size
 

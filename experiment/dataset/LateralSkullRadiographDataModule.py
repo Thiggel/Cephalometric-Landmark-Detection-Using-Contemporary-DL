@@ -27,6 +27,7 @@ class LateralSkullRadiographDataModule(L.LightningDataModule):
             transform=transform,
             crop=crop,
             resize_to=resize_to,
+            resize_points_to_aspect_ratio=resize_points_to_aspect_ratio
         )
 
         self.train_dataset, self.val_dataset, self.test_dataset = random_split(
