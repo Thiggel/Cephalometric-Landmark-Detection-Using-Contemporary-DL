@@ -71,7 +71,9 @@ class GlobalDetectionModule(nn.Module, HeatmapBasedLandmarkDetection):
 
         self.aspp = ASPP(64, 256, [1, 6, 12, 18])
 
-        self.conv = nn.Conv2d(256, output_size, 1)
+        # 3 * output_size because we are predicting 44 heatmaps
+        # and 44 offset maps for x and y
+        self.conv = nn.Conv2d(256, 3 * output_size, 1)
 
         self.upsample = nn.Upsample(
             scale_factor=4,
@@ -174,6 +176,8 @@ class YaoLandmarkDetection(
         self.patch_size = patch_size
         self.resize_to = resize_to
         self.patch_resize_to = patch_size
+        self.use_offset_maps = True
+        self.offset_map_radius = 20
 
         self.global_module = GlobalDetectionModule(num_points)
         self.local_module = LocalCorrectionModule()
@@ -188,7 +192,7 @@ class YaoLandmarkDetection(
         return self.forward_batch(images, self.patch_size)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
-        return self.forward_with_heatmaps(images)[-1]
+        return self.forward_with_heatmaps(images)[-2]
 
     def training_step(
         self,

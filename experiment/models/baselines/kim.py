@@ -33,6 +33,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
         self.original_image_size = original_image_size
         self.patch_resize_to = self._get_patch_resize_to()
         self.num_points = num_points
+        self.use_offset_maps = False
 
         self.global_module = nn.Sequential(*[
             HourglassNet(
@@ -70,7 +71,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
         return self.forward_batch(resized, resized.shape[-2:])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        _, _, predictions = self.forward_with_heatmaps(x)
+        _, _, predictions, _ = self.forward_with_heatmaps(x)
 
         return predictions
 

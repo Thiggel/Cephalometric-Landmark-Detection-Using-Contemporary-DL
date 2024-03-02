@@ -241,11 +241,18 @@ class HeatmapBasedLandmarkDetection:
         images: torch.Tensor,
         patch_size: tuple[int, int],
     ) -> torch.Tensor:
-        batch_size, channels, _, _ = images.shape
+        batch_size, channels, height, width = images.shape
 
-        global_heatmaps = self.global_module(
+        output = self.global_module(
             images
         )
+
+        offset_maps = output[:, :2 * self.num_points].view(
+            batch_size, self.num_points, 2, height, width
+        ) if self.use_offset_maps else None
+
+        global_heatmaps = output[:, 2 * self.num_points:] \
+            if self.use_offset_maps else output
 
         point_predictions = self._get_highest_points(
             global_heatmaps
@@ -281,7 +288,48 @@ class HeatmapBasedLandmarkDetection:
             local_heatmaps
         )
 
-        return global_heatmaps, local_heatmaps, refined_point_predictions
+        return (
+            global_heatmaps,
+            local_heatmaps,
+            refined_point_predictions,
+            offset_maps
+        )
+
+    def _create_offset_maps(
+        self,
+        targets: torch.Tensor,
+    ) -> torch.Tensor:
+        batch_size, num_points, _ = targets.shape
+
+        y_grid, x_grid = torch.meshgrid(
+            torch.arange(self.resize_to[0], device=self.device),
+            torch.arange(self.resize_to[1], device=self.device),
+        )
+
+        y_grid = y_grid.unsqueeze(0).unsqueeze(0)
+        x_grid = x_grid.unsqueeze(0).unsqueeze(0)
+
+        x, y = targets.split(1, dim=-1)
+        x = x.unsqueeze(-1)
+        y = y.unsqueeze(-1)
+        x_offset_maps = (x - x_grid).abs().unsqueeze(2)
+        y_offset_maps = (y - y_grid).abs().unsqueeze(2)
+
+        offset_maps = torch.cat([
+            x_offset_maps,
+            y_offset_maps
+        ], dim=2) / self.offset_map_radius
+
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(1, 2)
+        ax[0].imshow(offset_maps[0, 0, 0].detach().cpu().numpy())
+        ax[1].imshow(offset_maps[0, 0, 1].detach().cpu().numpy())
+        ax[0].scatter(targets[0, 0, 0], targets[0, 0, 1], c='r')
+        ax[1].scatter(targets[0, 0, 0], targets[0, 0, 1], c='r')
+        plt.show()
+
+
+        return offset_maps
 
     def step(
         self,
@@ -293,9 +341,17 @@ class HeatmapBasedLandmarkDetection:
             global_heatmaps,
             local_heatmaps,
             predictions,
+            offset_maps
         ) = self.forward_with_heatmaps(images)
 
         target_heatmaps, mask = self._create_heatmaps(targets)
+        target_offset_maps = self._create_offset_maps(targets) \
+            if self.use_offset_maps else None
+
+        offset_loss = self.loss(
+            offset_maps,
+            target_offset_maps
+        ).mean(2) if self.use_offset_maps else 0
 
         loss = self.loss(
             global_heatmaps,
@@ -303,7 +359,7 @@ class HeatmapBasedLandmarkDetection:
         ) + self.loss(
             local_heatmaps,
             target_heatmaps,
-        )
+        ) + offset_loss
 
         masked_loss = loss * mask
 
