@@ -320,15 +320,6 @@ class HeatmapBasedLandmarkDetection:
             y_offset_maps
         ], dim=2) / self.offset_map_radius
 
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(1, 2)
-        ax[0].imshow(offset_maps[0, 0, 0].detach().cpu().numpy())
-        ax[1].imshow(offset_maps[0, 0, 1].detach().cpu().numpy())
-        ax[0].scatter(targets[0, 0, 0], targets[0, 0, 1], c='r')
-        ax[1].scatter(targets[0, 0, 0], targets[0, 0, 1], c='r')
-        plt.show()
-
-
         return offset_maps
 
     def step(
