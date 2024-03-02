@@ -82,6 +82,8 @@ def run(args: dict, seed: int = 42) -> dict:
         'point_ids': datamodule.dataset.point_ids,
         'model_size': args.model_size,
         'resize_to': model_type.resize_to,
+        'resize_points_to_aspect_ratio':
+            model_type.resize_points_to_aspect_ratio,
         'optimizer': args.optimizer,
     }
 

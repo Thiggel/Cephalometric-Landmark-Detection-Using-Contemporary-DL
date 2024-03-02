@@ -33,22 +33,33 @@ class HeatmapBasedLandmarkDetection:
         global_heatmaps: torch.Tensor,
         local_heatmaps: torch.Tensor,
         point_predictions: torch.Tensor,
-        y_indices: torch.Tensor,
-        x_indices: torch.Tensor
     ) -> torch.Tensor:
         resized_local_heatmaps = F.interpolate(
             local_heatmaps,
-            self.patch_resize_to,
+            self.patch_resize_to
         )
 
         batch_size, num_points, _ = point_predictions.shape
-        patch_height, patch_width = self.patch_resize_to
 
-        padding_height, padding_width = self._get_padding_size()
+        padding_height, padding_width = self._get_padding_size(
+            self.patch_resize_to
+        )
 
         padded_global_heatmaps = self._pad_images(
             global_heatmaps.clone(),
             (padding_height, padding_width)
+        )
+
+        adjusted_points = self._adjust_points(
+            point_predictions,
+            (padding_height, padding_width)
+        )
+
+        y_indices, x_indices = self._get_indices(
+            adjusted_points,
+            (padding_height, padding_width),
+            padded_global_heatmaps,
+            self.patch_resize_to
         )
 
         horizontal_strip = padded_global_heatmaps.gather(2, y_indices)
@@ -114,10 +125,7 @@ class HeatmapBasedLandmarkDetection:
             int(resize_factor * self.resize_to[1])
         )
 
-        return torch.tensor(
-            patch_resize_to,
-            device=self.device
-        )
+        return patch_resize_to
 
     def _pad_images(
         self,
@@ -148,8 +156,11 @@ class HeatmapBasedLandmarkDetection:
             device=points.device
         )
 
-    def _get_padding_size(self) -> tuple[int, int]:
-        patch_height, patch_width = self.patch_size
+    def _get_padding_size(
+        self,
+        patch_size: tuple[int, int]
+    ) -> tuple[int, int]:
+        patch_height, patch_width = patch_size
         padding_height = patch_height // 2
         padding_width = patch_width // 2
 
@@ -179,34 +190,34 @@ class HeatmapBasedLandmarkDetection:
         points: torch.Tensor,
         padding_size: tuple[int, int],
         images: torch.Tensor,
+        patch_size
     ) -> tuple[torch.Tensor, torch.Tensor]:
         padding_height, padding_width = padding_size
         image_height, image_width = images.shape[-2:]
-        patch_height, patch_width = self.patch_size
+        patch_height, patch_width = patch_size
 
         y_indices = (
             points[:, :, 1].unsqueeze(2) +
             torch.arange(
-                padding_height,
-                -padding_height,
+                patch_height,
+                0,
                 step=-1,
                 device=images.device
-            )
+            ) - padding_height - 1
         ).unsqueeze(-1).repeat(1, 1, 1, image_width)
 
         x_indices = (
             points[:, :, 0].unsqueeze(2) +
             torch.arange(
-                -padding_width,
-                padding_width,
+                patch_width,
                 device=images.device
-            )
+            ) - padding_width
         ).unsqueeze(-2).repeat(1, 1, patch_height, 1)
 
         return y_indices, x_indices
 
     def _extract_patches(self, images, points):
-        padding_height, padding_width = self._get_padding_size()
+        padding_height, padding_width = self._get_padding_size(self.patch_size)
 
         padded_images, adjusted_points = self._pad_and_repeat_images(
             images, points, (padding_height, padding_width)
@@ -215,12 +226,15 @@ class HeatmapBasedLandmarkDetection:
         padded_height, padded_width = padded_images.shape[-2:]
 
         y_indices, x_indices = self._get_indices(
-            adjusted_points, (padding_height, padding_width), padded_images
+            adjusted_points,
+            (padding_height, padding_width),
+            padded_images,
+            self.patch_size
         )
 
         patches = padded_images.gather(2, y_indices).gather(3, x_indices)
 
-        return patches, y_indices, x_indices
+        return patches
 
     def forward_batch(
         self,
@@ -237,7 +251,7 @@ class HeatmapBasedLandmarkDetection:
             global_heatmaps
         )
 
-        regions_of_interest, y_indices, x_indices = self._extract_patches(
+        regions_of_interest = self._extract_patches(
             images, point_predictions
         )
 
@@ -261,8 +275,6 @@ class HeatmapBasedLandmarkDetection:
             global_heatmaps,
             local_heatmaps,
             point_predictions,
-            y_indices,
-            x_indices
         )
 
         refined_point_predictions = self._get_highest_points(

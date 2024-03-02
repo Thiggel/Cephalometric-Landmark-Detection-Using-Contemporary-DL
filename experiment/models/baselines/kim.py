@@ -14,19 +14,22 @@ from models.baselines.hourglass.hourglass import HourglassNet
 class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
     def __init__(
         self,
-        resize_to: tuple[int, int] = (256, 256),
+        resize_to: tuple[int, int] = (448, 448),
+        resize_points_to_aspect_ratio: tuple[int, int] = (256, 256),
         num_points: int = 44,
         num_hourglass_modules: int = 4,
         num_blocks_per_hourglass: int = 4,
         original_image_size: tuple[int, int] = (1840, 1360),
+        patch_size: tuple[int, int] = (256, 256),
         *args,
         **kwargs
     ):
         super().__init__()
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.patch_size = torch.tensor(resize_to, device=device)
-        self.resize_to = torch.tensor(resize_to, device=device)
+        self.patch_size = patch_size
+        self.resize_to = resize_to
+        self.resize_points_to_aspect_ratio = resize_points_to_aspect_ratio
         self.original_image_size = original_image_size
         self.patch_resize_to = self._get_patch_resize_to()
         self.num_points = num_points
@@ -59,7 +62,10 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
         self,
         x: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        resized = F.interpolate(x, size=self.resize_to.tolist())  # batch_size, 1, 256, 256
+        resized = F.interpolate(
+            x,
+            size=self.resize_points_to_aspect_ratio
+        )  # batch_size, 1, 256, 256
 
         return self.forward_batch(resized, resized.shape[-2:])
 
