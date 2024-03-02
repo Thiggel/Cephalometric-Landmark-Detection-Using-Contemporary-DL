@@ -47,7 +47,7 @@ class HeatmapBasedLandmarkDetection:
         padding_height, padding_width = self._get_padding_size()
 
         padded_global_heatmaps = self._pad_images(
-            global_heatmaps,
+            global_heatmaps.clone(),
             (padding_height, padding_width)
         )
 
