@@ -102,8 +102,8 @@ class HeatmapBasedLandmarkDetection:
         mask = (points[..., 0] >= 0) & (points[..., 1] >= 0)
 
         y_grid, x_grid = torch.meshgrid(
-            torch.arange(self.resize_to[0], device=self.device),
-            torch.arange(self.resize_to[1], device=self.device),
+            torch.arange(self.resize_points_to_aspect_ratio[0], device=self.device),
+            torch.arange(self.resize_points_to_aspect_ratio[1], device=self.device),
         )
 
         y_grid = y_grid.unsqueeze(0).unsqueeze(0)
