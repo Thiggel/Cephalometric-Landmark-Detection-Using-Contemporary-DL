@@ -46,7 +46,7 @@ class HeatmapBasedLandmarkDetection:
         )
 
         padded_global_heatmaps = self._pad_images(
-            global_heatmaps.clone(),
+            global_heatmaps,
             (padding_height, padding_width)
         )
 
@@ -64,11 +64,21 @@ class HeatmapBasedLandmarkDetection:
 
         horizontal_strip = padded_global_heatmaps.gather(2, y_indices)
 
-        horizontal_strip.scatter_(-1, x_indices, resized_local_heatmaps)
+        strip_with_patch = torch.scatter(
+            horizontal_strip,
+            -1,
+            x_indices,
+            resized_local_heatmaps
+        )
+        
+        heatmap_with_patch = torch.scatter(
+            padded_global_heatmaps,
+            -2,
+            y_indices,
+            strip_with_patch
+        )
 
-        padded_global_heatmaps.scatter_(-2, y_indices, horizontal_strip)
-
-        final_heatmaps = padded_global_heatmaps[
+        final_heatmaps = heatmap_with_patch[
             :, :, padding_height:-padding_height, padding_width:-padding_width
         ]
 
