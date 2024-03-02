@@ -175,6 +175,7 @@ class YaoLandmarkDetection(
         self.num_points = num_points
         self.patch_size = patch_size
         self.resize_to = resize_to
+        self.resize_points_to_aspect_ratio = self.resize_to
         self.patch_resize_to = patch_size
         self.use_offset_maps = True
         self.offset_map_radius = 20
