@@ -99,7 +99,7 @@ class LateralSkullRadiographDataset(Dataset):
 
     @property
     def _saved_points_path(self) -> str:
-        return os.path.join(self.root_dir, f'points_{self.resize_to}.pt')
+        return os.path.join(self.root_dir, f'points_{self.resize_points_to_aspect_ratio}.pt')
 
     def _load_dataset(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         images = []
