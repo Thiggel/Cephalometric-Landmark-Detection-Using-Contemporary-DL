@@ -103,7 +103,9 @@ def run(args: dict, seed: int = 42) -> dict:
 
     tensorboard_logger = TensorBoardLogger(
         'logs/',
-        name=get_model_name(model) + ' ' + date.today().isoformat(),
+        name=get_model_name(model) + ' '
+            + args.model_size + ' '
+            + date.today().isoformat(),
     )
 
     image_logger = ImagePredictionLogger(num_samples=5)
