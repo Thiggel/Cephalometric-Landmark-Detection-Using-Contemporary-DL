@@ -35,6 +35,7 @@ class CephalometricLandmarkDetector(L.LightningModule):
     def _init_model(self, model_name: str) -> nn.Module:
         model_types = {
             'ViT': lambda model_size: ViT(model_size, downscale=False),
+            'ViTLarge': lambda model_size: ViT(model_size, downscale=False),
             'ViTWithDownscaling': lambda model_size: ViT(model_size, downscale=True),
             'ConvNextV2': lambda model_size: ConvNextV2(model_size),
         }
