@@ -38,8 +38,8 @@ class ModelTypes(Enum):
             ModelTypes.ViT: ModelType(
                 name='ViT',
                 crop=False,
-                resize_to=(224, 224),
-                resize_points_to_aspect_ratio=(224, 224),
+                resize_to=(450, 450),
+                resize_points_to_aspect_ratio=(450, 450),
                 model=CephalometricLandmarkDetector
             ),
             ModelTypes.ConvNextV2: ModelType(
