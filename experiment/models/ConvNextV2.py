@@ -11,6 +11,8 @@ class ConvNextV2(nn.Module):
         self,
         model_type: str = 'tiny',
         output_size: int = 44,
+        *args,
+        **kwargs
     ):
         super().__init__()
 

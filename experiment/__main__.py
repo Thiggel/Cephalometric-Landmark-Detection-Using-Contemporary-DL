@@ -35,7 +35,7 @@ def get_args() -> dict:
         choices=ModelTypes.get_model_types()
     )
     parser.add_argument(
-        '--model_size', type=str, default='tiny', choices=['tiny', 'normal']
+        '--model_size', type=str, default='tiny', choices=['tiny', 'normal', 'large']
     )
     parser.add_argument('--splits', type=tuple, default=(0.8, 0.1, 0.1))
     parser.add_argument('--batch_size', type=int, default=32)
@@ -49,6 +49,11 @@ def get_args() -> dict:
         type=str,
         default='adam',
         choices=['adam', 'sgd', 'rmsprop', 'sgd_momentum']
+    )
+    parser.add_argument(
+        '--only_global_detection',
+        action=argparse.BooleanOptionalAction,
+        default=False
     )
 
     args = parser.parse_args()
@@ -85,6 +90,7 @@ def run(args: dict, seed: int = 42) -> dict:
         'resize_points_to_aspect_ratio':
             model_type.resize_points_to_aspect_ratio,
         'optimizer': args.optimizer,
+        'only_global_detection': args.only_global_detection,
     }
 
     model = model_type.initialize(**model_args)
@@ -103,13 +109,20 @@ def run(args: dict, seed: int = 42) -> dict:
 
     tensorboard_logger = TensorBoardLogger(
         'logs/',
-        name=get_model_name(model) + ' '
+        name=model_type.name + ' '
             + args.model_size + ' '
+            + (f'global_only' if args.only_global_detection else '')
             + date.today().isoformat(),
     )
 
-    image_logger = ImagePredictionLogger(num_samples=5)
-    heatmap_logger = HeatmapPredictionLogger(num_samples=5)
+    image_logger = ImagePredictionLogger(
+        num_samples=5,
+        resize_to=model_type.resize_to,
+        resize_points_to_aspect_ratio=model_type.resize_points_to_aspect_ratio,
+    )
+    heatmap_logger = HeatmapPredictionLogger(
+        num_samples=5,
+    )
 
     stats_monitor = DeviceStatsMonitor()
 

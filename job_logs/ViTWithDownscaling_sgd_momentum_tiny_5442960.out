@@ -1,0 +1,195 @@
+============================================================================================== 
+Warning! Mixing Conda and module environments may lead to corruption of the
+user environment. 
+We do not recommend users mixing those two environments unless absolutely
+necessary. Note that 
+SURF does not provide any support for Conda environment.
+For more information, please refer to our software policy page:
+https://servicedesk.surf.nl/wiki/display/WIKI/Software+policy+Snellius#SoftwarepolicySnelliusandLisa-UseofAnacondaandMinicondaenvironmentsonSnellius 
+
+Remember that many packages have already been installed on the system and can
+be loaded using 
+the 'module load <package__name>' command. If you are uncertain if a package is
+already available 
+on the system, please use 'module avail' or 'module spider' to search for it.
+============================================================================================== 
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: torch in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from -r requirements.txt (line 1)) (2.2.1)
+Requirement already satisfied: lightning in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from -r requirements.txt (line 2)) (2.2.0.post0)
+Requirement already satisfied: pandas in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from -r requirements.txt (line 3)) (1.4.2)
+Requirement already satisfied: torchvision in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from -r requirements.txt (line 4)) (0.17.1)
+Requirement already satisfied: pillow in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from -r requirements.txt (line 5)) (9.0.1)
+Requirement already satisfied: tqdm in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from -r requirements.txt (line 6)) (4.64.0)
+Requirement already satisfied: tensorboard in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from -r requirements.txt (line 7)) (2.16.2)
+Requirement already satisfied: matplotlib in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from -r requirements.txt (line 8)) (3.5.1)
+Requirement already satisfied: timm in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from -r requirements.txt (line 9)) (0.9.16)
+Requirement already satisfied: transformers in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from -r requirements.txt (line 10)) (4.38.1)
+Requirement already satisfied: albumentations in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from -r requirements.txt (line 11)) (1.4.0)
+Requirement already satisfied: psutil in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from -r requirements.txt (line 12)) (5.8.0)
+Requirement already satisfied: nvidia-cusparse-cu12==12.1.0.106 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (12.1.0.106)
+Requirement already satisfied: nvidia-cuda-cupti-cu12==12.1.105 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (12.1.105)
+Requirement already satisfied: typing-extensions>=4.8.0 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (4.10.0)
+Requirement already satisfied: fsspec in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (2024.2.0)
+Requirement already satisfied: nvidia-cusolver-cu12==11.4.5.107 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (11.4.5.107)
+Requirement already satisfied: nvidia-nvtx-cu12==12.1.105 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (12.1.105)
+Requirement already satisfied: nvidia-cufft-cu12==11.0.2.54 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (11.0.2.54)
+Requirement already satisfied: nvidia-cuda-runtime-cu12==12.1.105 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (12.1.105)
+Requirement already satisfied: triton==2.2.0 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (2.2.0)
+Requirement already satisfied: nvidia-cuda-nvrtc-cu12==12.1.105 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (12.1.105)
+Requirement already satisfied: nvidia-cudnn-cu12==8.9.2.26 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (8.9.2.26)
+Requirement already satisfied: nvidia-nccl-cu12==2.19.3 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (2.19.3)
+Requirement already satisfied: filelock in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (3.6.0)
+Requirement already satisfied: nvidia-cublas-cu12==12.1.3.1 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (12.1.3.1)
+Requirement already satisfied: networkx in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (3.2.1)
+Requirement already satisfied: jinja2 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (2.11.3)
+Requirement already satisfied: nvidia-curand-cu12==10.3.2.106 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (10.3.2.106)
+Requirement already satisfied: sympy in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from torch->-r requirements.txt (line 1)) (1.10.1)
+Requirement already satisfied: nvidia-nvjitlink-cu12 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from nvidia-cusolver-cu12==11.4.5.107->torch->-r requirements.txt (line 1)) (12.3.101)
+Requirement already satisfied: lightning-utilities<2.0,>=0.8.0 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from lightning->-r requirements.txt (line 2)) (0.10.1)
+Requirement already satisfied: numpy<3.0,>=1.17.2 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from lightning->-r requirements.txt (line 2)) (1.26.4)
+Requirement already satisfied: packaging<25.0,>=20.0 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from lightning->-r requirements.txt (line 2)) (21.3)
+Requirement already satisfied: PyYAML<8.0,>=5.4 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from lightning->-r requirements.txt (line 2)) (6.0)
+Requirement already satisfied: pytorch-lightning in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from lightning->-r requirements.txt (line 2)) (2.2.0.post0)
+Requirement already satisfied: torchmetrics<3.0,>=0.7.0 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from lightning->-r requirements.txt (line 2)) (1.3.1)
+Requirement already satisfied: python-dateutil>=2.8.1 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from pandas->-r requirements.txt (line 3)) (2.8.2)
+Requirement already satisfied: pytz>=2020.1 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from pandas->-r requirements.txt (line 3)) (2021.3)
+Requirement already satisfied: tensorboard-data-server<0.8.0,>=0.7.0 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from tensorboard->-r requirements.txt (line 7)) (0.7.2)
+Requirement already satisfied: setuptools>=41.0.0 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from tensorboard->-r requirements.txt (line 7)) (61.2.0)
+Requirement already satisfied: grpcio>=1.48.2 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from tensorboard->-r requirements.txt (line 7)) (1.62.0)
+Requirement already satisfied: markdown>=2.6.8 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from tensorboard->-r requirements.txt (line 7)) (3.3.4)
+Requirement already satisfied: protobuf!=4.24.0,>=3.19.6 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from tensorboard->-r requirements.txt (line 7)) (4.25.3)
+Requirement already satisfied: six>1.9 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from tensorboard->-r requirements.txt (line 7)) (1.16.0)
+Requirement already satisfied: absl-py>=0.4 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from tensorboard->-r requirements.txt (line 7)) (2.1.0)
+Requirement already satisfied: werkzeug>=1.0.1 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from tensorboard->-r requirements.txt (line 7)) (2.0.3)
+Requirement already satisfied: kiwisolver>=1.0.1 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from matplotlib->-r requirements.txt (line 8)) (1.3.2)
+Requirement already satisfied: fonttools>=4.22.0 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from matplotlib->-r requirements.txt (line 8)) (4.25.0)
+Requirement already satisfied: pyparsing>=2.2.1 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from matplotlib->-r requirements.txt (line 8)) (3.0.4)
+Requirement already satisfied: cycler>=0.10 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from matplotlib->-r requirements.txt (line 8)) (0.11.0)
+Requirement already satisfied: safetensors in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from timm->-r requirements.txt (line 9)) (0.4.2)
+Requirement already satisfied: huggingface_hub in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from timm->-r requirements.txt (line 9)) (0.20.3)
+Requirement already satisfied: regex!=2019.12.17 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from transformers->-r requirements.txt (line 10)) (2022.3.15)
+Requirement already satisfied: tokenizers<0.19,>=0.14 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from transformers->-r requirements.txt (line 10)) (0.15.2)
+Requirement already satisfied: requests in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from transformers->-r requirements.txt (line 10)) (2.27.1)
+Requirement already satisfied: opencv-python>=4.9.0 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from albumentations->-r requirements.txt (line 11)) (4.9.0.80)
+Requirement already satisfied: qudida>=0.0.4 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from albumentations->-r requirements.txt (line 11)) (0.0.4)
+Requirement already satisfied: scikit-image>=0.21.0 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from albumentations->-r requirements.txt (line 11)) (0.22.0)
+Requirement already satisfied: scipy>=1.10.0 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from albumentations->-r requirements.txt (line 11)) (1.12.0)
+Requirement already satisfied: aiohttp!=4.0.0a0,!=4.0.0a1 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from fsspec->torch->-r requirements.txt (line 1)) (3.8.1)
+Requirement already satisfied: charset-normalizer<3.0,>=2.0 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec->torch->-r requirements.txt (line 1)) (2.0.4)
+Requirement already satisfied: yarl<2.0,>=1.0 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec->torch->-r requirements.txt (line 1)) (1.6.3)
+Requirement already satisfied: multidict<7.0,>=4.5 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec->torch->-r requirements.txt (line 1)) (5.2.0)
+Requirement already satisfied: attrs>=17.3.0 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec->torch->-r requirements.txt (line 1)) (21.4.0)
+Requirement already satisfied: aiosignal>=1.1.2 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec->torch->-r requirements.txt (line 1)) (1.2.0)
+Requirement already satisfied: async-timeout<5.0,>=4.0.0a3 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec->torch->-r requirements.txt (line 1)) (4.0.1)
+Requirement already satisfied: frozenlist>=1.1.1 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec->torch->-r requirements.txt (line 1)) (1.2.0)
+Requirement already satisfied: opencv-python-headless>=4.0.1 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from qudida>=0.0.4->albumentations->-r requirements.txt (line 11)) (4.9.0.80)
+Requirement already satisfied: scikit-learn>=0.19.1 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from qudida>=0.0.4->albumentations->-r requirements.txt (line 11)) (1.0.2)
+Requirement already satisfied: tifffile>=2022.8.12 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from scikit-image>=0.21.0->albumentations->-r requirements.txt (line 11)) (2024.2.12)
+Requirement already satisfied: imageio>=2.27 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from scikit-image>=0.21.0->albumentations->-r requirements.txt (line 11)) (2.34.0)
+Requirement already satisfied: lazy_loader>=0.3 in /gpfs/home5/flaitenberger/.local/lib/python3.9/site-packages (from scikit-image>=0.21.0->albumentations->-r requirements.txt (line 11)) (0.3)
+Requirement already satisfied: joblib>=0.11 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from scikit-learn>=0.19.1->qudida>=0.0.4->albumentations->-r requirements.txt (line 11)) (1.1.0)
+Requirement already satisfied: threadpoolctl>=2.0.0 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from scikit-learn>=0.19.1->qudida>=0.0.4->albumentations->-r requirements.txt (line 11)) (2.2.0)
+Requirement already satisfied: idna>=2.0 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from yarl<2.0,>=1.0->aiohttp!=4.0.0a0,!=4.0.0a1->fsspec->torch->-r requirements.txt (line 1)) (3.3)
+Requirement already satisfied: MarkupSafe>=0.23 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from jinja2->torch->-r requirements.txt (line 1)) (2.0.1)
+Requirement already satisfied: certifi>=2017.4.17 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from requests->transformers->-r requirements.txt (line 10)) (2021.10.8)
+Requirement already satisfied: urllib3<1.27,>=1.21.1 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from requests->transformers->-r requirements.txt (line 10)) (1.26.9)
+Requirement already satisfied: mpmath>=0.19 in /gpfs/admin/_hpc/sw/arch/INTEL-AVX512/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages (from sympy->torch->-r requirements.txt (line 1)) (1.2.1)
+Some weights of ViTModel were not initialized from the model checkpoint at WinKawaks/vit-small-patch16-224 and are newly initialized: ['vit.pooler.dense.bias', 'vit.pooler.dense.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+IPU available: False, using: 0 IPUs
+HPU available: False, using: 0 HPUs
+You are using a CUDA device ('NVIDIA A100-SXM4-40GB') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+Missing logger folder: logs/ViTWithDownscaling tiny 2024-03-04
+/home/flaitenberger/.local/lib/python3.9/site-packages/lightning/pytorch/callbacks/model_checkpoint.py:652: Checkpoint directory /gpfs/home5/flaitenberger/Cephalometry/checkpoints exists and is not empty.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+
+  | Name  | Type           | Params
+-----------------------------------------
+0 | model | ViT            | 21.8 M
+1 | loss  | MaskedWingLoss | 0     
+-----------------------------------------
+21.8 M    Trainable params
+0         Non-trainable params
+21.8 M    Total params
+87.390    Total estimated model params size (MB)
+SLURM auto-requeueing enabled. Setting signal handlers.
+Loading dataset into memory...
+Done!
+Sanity Checking: |          | 0/? [00:00<?, ?it/s]/home/flaitenberger/.local/lib/python3.9/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:441: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=17` in the `DataLoader` to improve performance.
+Traceback (most recent call last):
+  File "/sw/arch/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/sw/arch/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/gpfs/home5/flaitenberger/Cephalometry/experiment/__main__.py", line 182, in <module>
+    results = run(args, seed=run_idx)[0]
+  File "/gpfs/home5/flaitenberger/Cephalometry/experiment/__main__.py", line 157, in run
+    trainer.fit(model=model, datamodule=datamodule)
+  File "/home/flaitenberger/.local/lib/python3.9/site-packages/lightning/pytorch/trainer/trainer.py", line 543, in fit
+    call._call_and_handle_interrupt(
+  File "/home/flaitenberger/.local/lib/python3.9/site-packages/lightning/pytorch/trainer/call.py", line 44, in _call_and_handle_interrupt
+    return trainer_fn(*args, **kwargs)
+  File "/home/flaitenberger/.local/lib/python3.9/site-packages/lightning/pytorch/trainer/trainer.py", line 579, in _fit_impl
+    self._run(model, ckpt_path=ckpt_path)
+  File "/home/flaitenberger/.local/lib/python3.9/site-packages/lightning/pytorch/trainer/trainer.py", line 986, in _run
+    results = self._run_stage()
+  File "/home/flaitenberger/.local/lib/python3.9/site-packages/lightning/pytorch/trainer/trainer.py", line 1030, in _run_stage
+    self._run_sanity_check()
+  File "/home/flaitenberger/.local/lib/python3.9/site-packages/lightning/pytorch/trainer/trainer.py", line 1059, in _run_sanity_check
+    val_loop.run()
+  File "/home/flaitenberger/.local/lib/python3.9/site-packages/lightning/pytorch/loops/utilities.py", line 182, in _decorator
+    return loop_run(self, *args, **kwargs)
+  File "/home/flaitenberger/.local/lib/python3.9/site-packages/lightning/pytorch/loops/evaluation_loop.py", line 114, in run
+    self.on_run_start()
+  File "/home/flaitenberger/.local/lib/python3.9/site-packages/lightning/pytorch/loops/evaluation_loop.py", line 245, in on_run_start
+    self._on_evaluation_epoch_start()
+  File "/home/flaitenberger/.local/lib/python3.9/site-packages/lightning/pytorch/loops/evaluation_loop.py", line 325, in _on_evaluation_epoch_start
+    call._call_callback_hooks(trainer, hook_name, *args, **kwargs)
+  File "/home/flaitenberger/.local/lib/python3.9/site-packages/lightning/pytorch/trainer/call.py", line 208, in _call_callback_hooks
+    fn(trainer, trainer.lightning_module, *args, **kwargs)
+  File "/gpfs/home5/flaitenberger/Cephalometry/experiment/loggers/ImagePredictionLogger.py", line 64, in on_validation_epoch_start
+    plt.imread('figure.png')
+  File "/sw/arch/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages/matplotlib/pyplot.py", line 2139, in imread
+    return matplotlib.image.imread(fname, format)
+  File "/sw/arch/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages/matplotlib/image.py", line 1560, in imread
+    with img_open(fname) as image:
+  File "/sw/arch/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages/PIL/ImageFile.py", line 112, in __init__
+    self._open()
+  File "/sw/arch/RHEL8/EB_production/2022/software/Anaconda3/2022.05/lib/python3.9/site-packages/PIL/PngImagePlugin.py", line 676, in _open
+    raise SyntaxError("not a PNG file")
+SyntaxError: not a PNG file
+                                                  
+JOB STATISTICS
+==============
+Job ID: 5442960
+Cluster: snellius
+User/Group: flaitenberger/flaitenberger
+State: FAILED (exit code 1)
+Nodes: 1
+Cores per node: 18
+CPU Utilized: 00:00:30
+CPU Efficiency: 4.50% of 00:11:06 core-walltime
+Job Wall-clock time: 00:00:37
+Memory Utilized: 1.19 MB
+Memory Efficiency: 0.00% of 120.00 GB

@@ -4,10 +4,14 @@ from lightning import Callback
 from lightning import Trainer, LightningModule
 
 from utils.clamp_points import clamp_points
+from utils.resize_points import resize_points
 
 
 class HeatmapPredictionLogger(Callback):
-    def __init__(self, num_samples: int):
+    def __init__(
+        self,
+        num_samples: int,
+    ):
         super().__init__()
         self.num_samples = num_samples
 
@@ -37,9 +41,9 @@ class HeatmapPredictionLogger(Callback):
         ))
 
         images, targets = batch
+
         images = images[:self.num_samples]
         targets = targets[:self.num_samples]
-
         (
             _,
             preds,

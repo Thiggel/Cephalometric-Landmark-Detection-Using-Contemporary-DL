@@ -213,7 +213,7 @@ class LateralSkullRadiographDataset(Dataset):
 
         flipped_points = points.clone()
 
-        flipped_points[..., 0] = width - flipped_points[..., 0]
+        flipped_points[..., 0] = self.resize_points_to_aspect_ratio[1] - flipped_points[..., 0]
 
         flipped_points = self._handle_invalid_points(
             points,
@@ -231,7 +231,7 @@ class LateralSkullRadiographDataset(Dataset):
 
         flipped_points = points.clone()
 
-        flipped_points[..., 1] = image.shape[-2] - flipped_points[..., 1]
+        flipped_points[..., 1] = self.resize_points_to_aspect_ratio[0] - flipped_points[..., 1]
 
         flipped_points = self._handle_invalid_points(
             points,

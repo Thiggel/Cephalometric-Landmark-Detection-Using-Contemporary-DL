@@ -20,9 +20,17 @@ class Downscaling(nn.Sequential):
 
 
 class ViT(nn.Module):
-    def __init__(self, model_type: str = 'tiny', output_size: int = 44):
+    def __init__(
+        self,
+        model_type: str = 'tiny',
+        output_size: int = 44,
+        downscale: bool = False,
+        *args,
+        **kwargs
+    ):
         super().__init__()
 
+        self.downscale = downscale
         self.downscaling = Downscaling()
         self.model, self.config = self._load_model(model_type)
         self.head = nn.Linear(self.config.hidden_size, 2 * output_size)
@@ -33,6 +41,8 @@ class ViT(nn.Module):
             model_name = 'WinKawaks/vit-small-patch16-224' # 'WinKawaks/vit-tiny-patch16-224'
         elif model_type == 'normal':
             model_name = 'google/vit-base-patch16-224-in21k'
+        elif model_type == 'large':
+            model_name = 'google/vit-large-patch16-384'
         else:
             raise ValueError("model_type must be either 'tiny' or 'normal'")
 
@@ -41,7 +51,11 @@ class ViT(nn.Module):
         return model, model.config
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
-        images = self.downscaling(images)
+        if self.downscale:
+            images = self.downscaling(images)
+        else:
+            images = images.repeat(1, 3, 1, 1)
+
         output = self.model(images).last_hidden_state[:, 0, :]
         output = self.head(output).reshape(-1, self.output_size, 2)
 

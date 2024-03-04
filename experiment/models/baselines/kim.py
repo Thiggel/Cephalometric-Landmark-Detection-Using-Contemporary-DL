@@ -21,6 +21,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
         num_blocks_per_hourglass: int = 4,
         original_image_size: tuple[int, int] = (1840, 1360),
         patch_size: tuple[int, int] = (256, 256),
+        only_global_detection: bool = False,
         *args,
         **kwargs
     ):
@@ -32,6 +33,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
         self.resize_points_to_aspect_ratio = resize_points_to_aspect_ratio
         self.original_image_size = original_image_size
         self.patch_resize_to = self._get_patch_resize_to()
+        self.only_global_detection = only_global_detection
         self.num_points = num_points
         self.use_offset_maps = False
 

@@ -1,6 +1,8 @@
 import torch
 import torch.nn.functional as F
 
+from utils.resize_points import resize_points
+
 
 class HeatmapBasedLandmarkDetection:
     @property
@@ -267,6 +269,14 @@ class HeatmapBasedLandmarkDetection:
         point_predictions = self._get_highest_points(
             global_heatmaps
         )
+
+        if self.only_global_detection:
+            return (
+                global_heatmaps,
+                global_heatmaps,
+                point_predictions,
+                offset_maps
+            )
 
         regions_of_interest = self._extract_patches(
             images, point_predictions

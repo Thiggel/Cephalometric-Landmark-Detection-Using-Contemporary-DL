@@ -21,6 +21,8 @@ class ModelType:
 
 class ModelTypes(Enum):
     ViT = "ViT"
+    ViTLarge = "ViTLarge"
+    ViTWithDownscaling = "ViTWithDownscaling"
     ConvNextV2 = "ConvNextV2"
     Yao = "Yao"
     Kim = "Kim"
@@ -30,13 +32,27 @@ class ModelTypes(Enum):
         return {
             ModelTypes.Kim: ModelType(
                 name='Kim',
-                crop=True,
-                resize_to=(448, 448),#(1360, 1360),
+                crop=False,
+                resize_to=(800, 800),#(448, 448),
                 resize_points_to_aspect_ratio=(256, 256),
                 model=KimLandmarkDetection
             ),
             ModelTypes.ViT: ModelType(
                 name='ViT',
+                crop=False,
+                resize_to=(224, 224),
+                resize_points_to_aspect_ratio=(224, 224),
+                model=CephalometricLandmarkDetector
+            ),
+            ModelTypes.ViTLarge: ModelType(
+                name='ViTLarge',
+                crop=False,
+                resize_to=(384, 384),
+                resize_points_to_aspect_ratio=(384, 384),
+                model=CephalometricLandmarkDetector
+            ),
+            ModelTypes.ViTWithDownscaling: ModelType(
+                name='ViTWithDownscaling',
                 crop=False,
                 resize_to=(450, 450),
                 resize_points_to_aspect_ratio=(450, 450),

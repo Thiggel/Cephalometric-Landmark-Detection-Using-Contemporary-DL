@@ -162,6 +162,7 @@ class YaoLandmarkDetection(
         resize_to: tuple[int, int] = (576, 512),
         patch_size: tuple[int, int] = (96, 96),
         num_points: int = 44,
+        only_global_detection: bool = False,
         *args,
         **kwargs,
     ):
@@ -177,6 +178,7 @@ class YaoLandmarkDetection(
         self.resize_to = resize_to
         self.resize_points_to_aspect_ratio = self.resize_to
         self.patch_resize_to = patch_size
+        self.only_global_detection = only_global_detection
         self.use_offset_maps = True
         self.offset_map_radius = 20
 

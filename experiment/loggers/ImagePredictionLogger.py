@@ -3,12 +3,20 @@ import torch
 from lightning import Callback, Trainer, LightningModule
 
 from utils.clamp_points import clamp_points
+from utils.resize_points import resize_points
 
 
 class ImagePredictionLogger(Callback):
-    def __init__(self, num_samples: int):
+    def __init__(
+        self,
+        num_samples: int,
+        resize_to: tuple[int, int],
+        resize_points_to_aspect_ratio: tuple[int, int]
+    ):
         super().__init__()
         self.num_samples = num_samples
+        self.resize_to = resize_to
+        self.resize_points_to_aspect_ratio = resize_points_to_aspect_ratio
 
     def on_validation_epoch_start(
         self,
@@ -18,7 +26,19 @@ class ImagePredictionLogger(Callback):
         images, targets = next(iter(trainer.datamodule.val_dataloader()))
         images = images[:self.num_samples]
 
+        targets = resize_points(
+            targets[:self.num_samples],
+            self.resize_to,
+            self.resize_points_to_aspect_ratio
+        )
+
         preds = pl_module(images)
+
+        preds = resize_points(
+            preds,
+            self.resize_to,
+            self.resize_points_to_aspect_ratio
+        )
 
         preds = clamp_points(preds, images).cpu().numpy()
         targets = clamp_points(targets, images).cpu().numpy()
