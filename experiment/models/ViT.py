@@ -41,7 +41,7 @@ class ViT(nn.Module):
         return model, model.config
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
-        images = images.repeat(1, 3, 1, 1)
+        images = self.downscaling(images)
         output = self.model(images).last_hidden_state[:, 0, :]
         output = self.head(output).reshape(-1, self.output_size, 2)
 
