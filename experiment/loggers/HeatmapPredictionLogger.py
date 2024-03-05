@@ -11,9 +11,11 @@ class HeatmapPredictionLogger(Callback):
     def __init__(
         self,
         num_samples: int,
+        module_name: str
     ):
         super().__init__()
         self.num_samples = num_samples
+        self.module_name = module_name
 
     def show_heatmap(
         self,
@@ -107,10 +109,13 @@ class HeatmapPredictionLogger(Callback):
             )
 
         plt.tight_layout()
-        plt.savefig('figure_heatmaps.png', bbox_inches='tight')
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+
+        plt.savefig(f'figures/figure_heatmaps_{self.module_name}.png', bbox_inches='tight')
 
         image = torch.from_numpy(
-            plt.imread('figure_heatmaps.png')
+            plt.imread('figures/figure_heatmaps.png')
         ).permute(2, 0, 1)
 
         trainer.logger.experiment.add_image(

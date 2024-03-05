@@ -11,12 +11,14 @@ class ImagePredictionLogger(Callback):
         self,
         num_samples: int,
         resize_to: tuple[int, int],
-        resize_points_to_aspect_ratio: tuple[int, int]
+        resize_points_to_aspect_ratio: tuple[int, int],
+        module_name: str
     ):
         super().__init__()
         self.num_samples = num_samples
         self.resize_to = resize_to
         self.resize_points_to_aspect_ratio = resize_points_to_aspect_ratio
+        self.module_name = module_name
 
     def on_validation_epoch_start(
         self,
@@ -58,10 +60,14 @@ class ImagePredictionLogger(Callback):
             axs[i].axis('off')
 
         plt.tight_layout()
-        plt.savefig('figure.png', bbox_inches='tight')
+
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+
+        plt.savefig(f'figures/figure_{self.module_name}.png', bbox_inches='tight')
 
         image = torch.from_numpy(
-            plt.imread('figure.png')
+            plt.imread('figures/figure.png')
         ).permute(2, 0, 1)
 
         trainer.logger.experiment.add_image(
