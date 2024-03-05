@@ -298,21 +298,23 @@ class HeatmapBasedLandmarkDetection:
             patch_width
         )
 
-        local_heatmaps = self._paste_heatmaps(
+        pasted_local_heatmaps = self._paste_heatmaps(
             global_heatmaps,
             local_heatmaps,
             point_predictions,
         )
 
         refined_point_predictions = self._get_highest_points(
-            local_heatmaps
+            pasted_local_heatmaps
         )
 
         return (
             global_heatmaps,
             local_heatmaps,
+            pasted_local_heatmaps,
+            offset_maps,
+            point_predictions,
             refined_point_predictions,
-            offset_maps
         )
 
     def _create_offset_maps(
@@ -351,11 +353,16 @@ class HeatmapBasedLandmarkDetection:
         (
             global_heatmaps,
             local_heatmaps,
+            pasted_local_heatmaps,
+            offset_maps,
             predictions,
-            offset_maps
+            refined_predictions
         ) = self.forward_with_heatmaps(images)
 
-        target_heatmaps, mask = self._create_heatmaps(targets)
+        target_global_heatmaps, mask = self._create_heatmaps(targets)
+        target_local_heatmaps, _ = self._create_heatmaps(
+            predictions
+        )
         target_offset_maps = self._create_offset_maps(targets) \
             if self.use_offset_maps else None
 
@@ -366,20 +373,20 @@ class HeatmapBasedLandmarkDetection:
 
         loss = self.loss(
             global_heatmaps,
-            target_heatmaps,
+            target_global_heatmaps,
         ) + self.loss(
             local_heatmaps,
-            target_heatmaps,
+            target_local_heatmaps,
         ) + offset_loss
 
         masked_loss = loss * mask
 
         return (
             masked_loss.mean(),
-            predictions,
+            refined_predictions,
             global_heatmaps,
-            local_heatmaps,
-            target_heatmaps
+            pasted_local_heatmaps,
+            target_global_heatmaps
         )
 
     def validation_test_step(
