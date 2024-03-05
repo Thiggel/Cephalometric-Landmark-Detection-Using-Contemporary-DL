@@ -360,8 +360,13 @@ class HeatmapBasedLandmarkDetection:
         ) = self.forward_with_heatmaps(images)
 
         target_global_heatmaps, mask = self._create_heatmaps(targets)
-        target_local_heatmaps, _ = self._create_heatmaps(
+        target_local_heatmaps, _ = self._extract_patches(
+            target_global_heatmaps,
             predictions
+        )
+        target_local_heatmaps = F.interpolate(
+            target_local_heatmaps,
+            self.patch_resize_to
         )
         target_offset_maps = self._create_offset_maps(targets) \
             if self.use_offset_maps else None

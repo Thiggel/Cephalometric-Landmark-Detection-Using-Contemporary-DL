@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import torch
 from lightning import Callback, Trainer, LightningModule
+import os
 
 from utils.clamp_points import clamp_points
 from utils.resize_points import resize_points
@@ -64,10 +65,11 @@ class ImagePredictionLogger(Callback):
         if not os.path.exists('figures'):
             os.makedirs('figures')
 
-        plt.savefig(f'figures/figure_{self.module_name}.png', bbox_inches='tight')
+        path = f'figures/figure_{self.module_name}.png'
+        plt.savefig(path, bbox_inches='tight')
 
         image = torch.from_numpy(
-            plt.imread('figures/figure.png')
+            plt.imread(path)
         ).permute(2, 0, 1)
 
         trainer.logger.experiment.add_image(
