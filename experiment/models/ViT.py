@@ -22,7 +22,7 @@ class Downscaling(nn.Sequential):
 class ViT(nn.Module):
     def __init__(
         self,
-        model_type: str = 'tiny',
+        model_name: str = 'tiny',
         output_size: int = 44,
         downscale: bool = False,
         *args,
@@ -32,11 +32,11 @@ class ViT(nn.Module):
 
         self.downscale = downscale
         self.downscaling = Downscaling()
-        self.model, self.config = self._load_model(model_type)
+        self.model, self.config = self._load_model(model_name)
         self.head = nn.Linear(self.config.hidden_size, 2 * output_size)
         self.output_size = output_size
 
-    def _load_model(self, model_type: str) -> nn.Module:
+    def _load_model(self, model_name: str) -> nn.Module:
         if model_type == 'tiny':
             model_name = 'WinKawaks/vit-small-patch16-224' # 'WinKawaks/vit-tiny-patch16-224'
         elif model_type == 'normal':

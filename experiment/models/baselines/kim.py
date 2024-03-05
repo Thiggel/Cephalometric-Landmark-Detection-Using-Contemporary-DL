@@ -15,7 +15,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
     def __init__(
         self,
         resize_to: tuple[int, int] = (448, 448),
-        resize_points_to_aspect_ratio: tuple[int, int] = (256, 256),
+        resized_points_reference_frame_shape: tuple[int, int] = (256, 256),
         num_points: int = 44,
         num_hourglass_modules: int = 4,
         num_blocks_per_hourglass: int = 4,
@@ -30,7 +30,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.patch_size = patch_size
         self.resize_to = resize_to
-        self.resize_points_to_aspect_ratio = resize_points_to_aspect_ratio
+        self.resized_points_reference_frame_shape = resized_points_reference_frame_shape
         self.original_image_size = original_image_size
         self.patch_resize_to = self._get_patch_resize_to()
         self.only_global_detection = only_global_detection
@@ -67,7 +67,7 @@ class KimLandmarkDetection(L.LightningModule, HeatmapBasedLandmarkDetection):
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         resized = F.interpolate(
             x,
-            size=self.resize_points_to_aspect_ratio
+            size=self.resized_points_reference_frame_shape
         )  # batch_size, 1, 256, 256
 
         return self.forward_batch(resized, resized.shape[-2:])

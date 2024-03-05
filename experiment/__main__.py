@@ -78,17 +78,17 @@ def run(args: dict, seed: int = 42) -> dict:
         splits=args.splits,
         batch_size=args.batch_size,
         crop=model_type.crop,
-        resize_to=model_type.resize_to,
-        resize_points_to_aspect_ratio=model_type.resize_points_to_aspect_ratio,
+        resized_images_shape=model_type.resized_images_shape,
+        resized_points_reference_frame_shape=model_type.resized_points_reference_frame_shape,
     )
 
     model_args = {
         'model_name': args.model_name,
         'point_ids': datamodule.dataset.point_ids,
         'model_size': args.model_size,
-        'resize_to': model_type.resize_to,
-        'resize_points_to_aspect_ratio':
-            model_type.resize_points_to_aspect_ratio,
+        'resized_images_shape': model_type.resized_images_shape,
+        'resized_points_reference_frame_shape':
+            model_type.resized_points_reference_frame_shape,
         'optimizer': args.optimizer,
         'only_global_detection': args.only_global_detection,
     }
@@ -117,8 +117,8 @@ def run(args: dict, seed: int = 42) -> dict:
 
     image_logger = ImagePredictionLogger(
         num_samples=5,
-        resize_to=model_type.resize_to,
-        resize_points_to_aspect_ratio=model_type.resize_points_to_aspect_ratio,
+        resized_images_shape=model_type.resized_images_shape,
+        resized_points_reference_frame_shape=model_type.resized_points_reference_frame_shape,
     )
     heatmap_logger = HeatmapPredictionLogger(
         num_samples=5,

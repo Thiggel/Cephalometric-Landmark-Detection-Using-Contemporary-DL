@@ -10,13 +10,13 @@ class ImagePredictionLogger(Callback):
     def __init__(
         self,
         num_samples: int,
-        resize_to: tuple[int, int],
-        resize_points_to_aspect_ratio: tuple[int, int]
+        resized_images_shape: tuple[int, int],
+        resized_points_reference_frame_shape: tuple[int, int]
     ):
         super().__init__()
         self.num_samples = num_samples
-        self.resize_to = resize_to
-        self.resize_points_to_aspect_ratio = resize_points_to_aspect_ratio
+        self.resized_images_shape = resized_images_shape
+        self.resized_points_reference_frame_shape = resized_points_reference_frame_shape
 
     def on_validation_epoch_start(
         self,
@@ -28,16 +28,16 @@ class ImagePredictionLogger(Callback):
 
         targets = resize_points(
             targets[:self.num_samples],
-            self.resize_to,
-            self.resize_points_to_aspect_ratio
+            self.resized_images_shape,
+            self.resized_points_reference_frame_shape
         )
 
         preds = pl_module(images)
 
         preds = resize_points(
             preds,
-            self.resize_to,
-            self.resize_points_to_aspect_ratio
+            self.resized_images_shape,
+            self.resized_points_reference_frame_shape
         )
 
         preds = clamp_points(preds, images).cpu().numpy()

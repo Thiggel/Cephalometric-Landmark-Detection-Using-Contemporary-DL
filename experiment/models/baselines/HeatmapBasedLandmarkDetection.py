@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
-
-from utils.resize_points import resize_points
+from torch.optim import RMSprop
+from torch.optim.lr_scheduler import ExponentialLR
 
 
 class HeatmapBasedLandmarkDetection:
@@ -38,13 +38,13 @@ class HeatmapBasedLandmarkDetection:
     ) -> torch.Tensor:
         resized_local_heatmaps = F.interpolate(
             local_heatmaps,
-            self.patch_resize_to
+            self.resized_patch_shape
         )
 
         batch_size, num_points, _ = point_predictions.shape
 
         padding_height, padding_width = self._get_padding_size(
-            self.patch_resize_to
+            self.resized_patch_shape
         )
 
         padded_global_heatmaps = self._pad_images(
@@ -61,7 +61,7 @@ class HeatmapBasedLandmarkDetection:
             adjusted_points,
             (padding_height, padding_width),
             padded_global_heatmaps,
-            self.patch_resize_to
+            self.resized_patch_shape
         )
 
         horizontal_strip = padded_global_heatmaps.gather(2, y_indices)
@@ -104,8 +104,14 @@ class HeatmapBasedLandmarkDetection:
         mask = (points[..., 0] >= 0) & (points[..., 1] >= 0)
 
         y_grid, x_grid = torch.meshgrid(
-            torch.arange(self.resize_points_to_aspect_ratio[0], device=self.device),
-            torch.arange(self.resize_points_to_aspect_ratio[1], device=self.device),
+            torch.arange(
+                self.resized_points_reference_frame_shape[0],
+                device=self.device
+            ),
+            torch.arange(
+                self.resized_points_reference_frame_shape[1],
+                device=self.device
+            ),
         )
 
         y_grid = y_grid.unsqueeze(0).unsqueeze(0)
@@ -121,7 +127,7 @@ class HeatmapBasedLandmarkDetection:
 
         return heatmaps, mask.unsqueeze(-1).unsqueeze(-1)
 
-    def _get_patch_resize_to(self) -> torch.Tensor:
+    def _get_resized_patch_shape(self) -> torch.Tensor:
         """
         For some methods, a patch is extracted from the original image
         which is a lot larger than the resized image. This function
@@ -131,13 +137,13 @@ class HeatmapBasedLandmarkDetection:
         global heatmaps at the respective position of the refined
         point prediction.
         """
-        resize_factor = self.resize_to[0] / self.original_image_size[0]
-        patch_resize_to = (
-            int(resize_factor * self.resize_to[0]),
-            int(resize_factor * self.resize_to[1])
+        resize_factor = self.resized_images_shape[0] / self.original_image_size[0]
+        resized_patch_shape = (
+            int(resize_factor * self.resized_images_shape[0]),
+            int(resize_factor * self.resized_images_shape[1])
         )
 
-        return patch_resize_to
+        return resized_patch_shape
 
     def _pad_images(
         self,
@@ -324,8 +330,8 @@ class HeatmapBasedLandmarkDetection:
         batch_size, num_points, _ = targets.shape
 
         y_grid, x_grid = torch.meshgrid(
-            torch.arange(self.resize_to[0], device=self.device),
-            torch.arange(self.resize_to[1], device=self.device),
+            torch.arange(self.resized_images_shape[0], device=self.device),
+            torch.arange(self.resized_images_shape[1], device=self.device),
         )
 
         y_grid = y_grid.unsqueeze(0).unsqueeze(0)
@@ -403,3 +409,75 @@ class HeatmapBasedLandmarkDetection:
         )
 
         return loss, unreduced_mm_error, predictions, targets
+
+    def training_step(
+        self,
+        batch: tuple[torch.Tensor, torch.Tensor],
+        batch_idx: int
+    ) -> torch.Tensor:
+        loss, _, _,  _, _ = self.step(batch)
+
+        self.log(
+            'train_loss',
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True
+        )
+
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        loss, unreduced_mm_error, _, _ = self.validation_test_step(batch)
+
+        self.log('val_loss', loss, prog_bar=True)
+        self.log('val_mm_error', unreduced_mm_error.mean(), prog_bar=True)
+
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        (
+            loss,
+            unreduced_mm_error,
+            predictions,
+            targets
+        ) = self.validation_test_step(batch)
+
+        for (id, point_id) in enumerate(self.point_ids):
+            self.log(f'{point_id}_mm_error', unreduced_mm_error[id].mean())
+
+        self.log('test_loss', loss, prog_bar=True)
+        self.log('test_mm_error', unreduced_mm_error.mean(), prog_bar=True)
+
+        self.log(
+            'percent_under_1mm',
+            self.mm_error.percent_under_n_mm(predictions, targets, 1)
+        )
+        self.log(
+            'percent_under_2mm',
+            self.mm_error.percent_under_n_mm(predictions, targets, 2)
+        )
+        self.log(
+            'percent_under_3mm',
+            self.mm_error.percent_under_n_mm(predictions, targets, 3)
+        )
+        self.log(
+            'percent_under_4mm',
+            self.mm_error.percent_under_n_mm(predictions, targets, 4)
+        )
+
+        return loss
+
+    def configure_optimizers(self):
+        optimizer = RMSprop(self.parameters(), lr=2.5e-4)
+        scheduler = ExponentialLR(optimizer, 0.9)
+
+        return {
+            'optimizer': optimizer,
+            'lr_scheduler': {
+                'scheduler': scheduler,
+                'interval': 'epoch',
+                'frequency': 4,
+                'monitor': 'val_loss',
+            }
+        }

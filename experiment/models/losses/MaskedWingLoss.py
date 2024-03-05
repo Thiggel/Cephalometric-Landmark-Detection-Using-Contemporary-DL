@@ -9,7 +9,7 @@ class MaskedWingLoss(nn.Module):
         epsilon: float = 2,
         old_px_per_m: int = 7_756,
         original_image_size: tuple[int, int] = (1360, 1840),
-        resize_to: tuple[int, int] = (224, 224),
+        resized_images_shape: tuple[int, int] = (224, 224),
     ):
         super().__init__()
 
@@ -21,20 +21,20 @@ class MaskedWingLoss(nn.Module):
         self.px_per_m = self._get_px_per_m(
             old_px_per_m=old_px_per_m,
             original_image_size=original_image_size,
-            resize_to=resize_to
+            resized_images_shape=resized_images_shape
         )
 
     def _get_px_per_m(
         self,
         old_px_per_m: int,
         original_image_size: tuple[int, int],
-        resize_to: tuple[int, int],
+        resized_images_shape: tuple[int, int],
     ) -> torch.Tensor:
         old_px_per_m = torch.tensor(old_px_per_m, device=self.device)
         original_image_size = torch.tensor(original_image_size, device=self.device)
         original_image_size_m = original_image_size / old_px_per_m
-        resize_to = torch.tensor(resize_to, device=self.device)
-        new_px_per_m = original_image_size_m / resize_to
+        resized_images_shape = torch.tensor(resized_images_shape, device=self.device)
+        new_px_per_m = original_image_size_m / resized_images_shape
 
         return new_px_per_m
 

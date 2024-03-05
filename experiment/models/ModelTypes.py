@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from enum import Enum
 import torch.nn as nn
 
-from models.CephalometricLandmarkDetector import CephalometricLandmarkDetector
+from models.DirectPointPredictionBasedLandmarkDetection import \
+    DirectPointPredictionBasedLandmarkDetection
 from models.baselines.yao import YaoLandmarkDetection
 from models.baselines.kim import KimLandmarkDetection
 
@@ -11,8 +12,8 @@ from models.baselines.kim import KimLandmarkDetection
 class ModelType:
     name: str
     crop: bool
-    resize_to: tuple[int, int]
-    resize_points_to_aspect_ratio: tuple[int, int]
+    resized_images_shape: tuple[int, int]
+    resized_points_reference_frame_shape: tuple[int, int]
     model: nn.Module
 
     def initialize(self, *args, **kwargs) -> nn.Module:
@@ -33,43 +34,43 @@ class ModelTypes(Enum):
             ModelTypes.Kim: ModelType(
                 name='Kim',
                 crop=False,
-                resize_to=(800, 800),#(448, 448),
-                resize_points_to_aspect_ratio=(256, 256),
+                resized_images_shape=(800, 800),#(448, 448),
+                resized_points_reference_frame_shape=(256, 256),
                 model=KimLandmarkDetection
             ),
             ModelTypes.ViT: ModelType(
                 name='ViT',
                 crop=False,
-                resize_to=(224, 224),
-                resize_points_to_aspect_ratio=(224, 224),
-                model=CephalometricLandmarkDetector
+                resized_images_shape=(224, 224),
+                resized_points_reference_frame_shape=(224, 224),
+                model=DirectPointPredictionBasedLandmarkDetection
             ),
             ModelTypes.ViTLarge: ModelType(
                 name='ViTLarge',
                 crop=False,
-                resize_to=(384, 384),
-                resize_points_to_aspect_ratio=(384, 384),
-                model=CephalometricLandmarkDetector
+                resized_images_shape=(384, 384),
+                resized_points_reference_frame_shape=(384, 384),
+                model=DirectPointPredictionBasedLandmarkDetection
             ),
             ModelTypes.ViTWithDownscaling: ModelType(
                 name='ViTWithDownscaling',
                 crop=False,
-                resize_to=(450, 450),
-                resize_points_to_aspect_ratio=(450, 450),
-                model=CephalometricLandmarkDetector
+                resized_images_shape=(450, 450),
+                resized_points_reference_frame_shape=(450, 450),
+                model=DirectPointPredictionBasedLandmarkDetection
             ),
             ModelTypes.ConvNextV2: ModelType(
                 name='ConvNextV2',
                 crop=False,
-                resize_to=(224, 224),
-                resize_points_to_aspect_ratio=(224, 224),
-                model=CephalometricLandmarkDetector
+                resized_images_shape=(224, 224),
+                resized_points_reference_frame_shape=(224, 224),
+                model=DirectPointPredictionBasedLandmarkDetection
             ),
             ModelTypes.Yao: ModelType(
                 name='Yao',
                 crop=False,
-                resize_to=(576, 512),
-                resize_points_to_aspect_ratio=(576, 512),
+                resized_images_shape=(576, 512),
+                resized_points_reference_frame_shape=(576, 512),
                 model=YaoLandmarkDetection
             ),
         }
