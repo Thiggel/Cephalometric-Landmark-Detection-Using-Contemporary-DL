@@ -16,7 +16,7 @@ from loggers.HeatmapPredictionLogger import HeatmapPredictionLogger
 from dataset.LateralSkullRadiographDataModule import \
     LateralSkullRadiographDataModule
 from models.ModelTypes import ModelTypes
-from models.baselines.HeatmapBasedLandmarkDetection import \
+from models.HeatmapBasedLandmarkDetection import \
     HeatmapBasedLandmarkDetection
 
 mp.set_start_method('spawn')
@@ -69,18 +69,16 @@ def run(args: dict, seed: int = 42) -> dict:
     model_args = {
         'model_name': args.model_name,
         'point_ids': datamodule.dataset.point_ids,
-        'model_size': args.model_size,
         'resized_image_size': model_type.resized_image_size,
         'resized_point_reference_frame_size':
             model_type.resized_point_reference_frame_size,
-        'optimizer': args.optimizer,
     }
 
     model = model_type.initialize(**model_args)
 
     checkpoint_callback = ModelCheckpoint(
         dirpath='checkpoints/',
-        filename=model_type.name + '-' + args.model_size + '-{epoch}-{val_loss:.2f}',
+        filename=args.model_name + '-{epoch}-{val_loss:.2f}',
         monitor='val_loss',
     )
 
@@ -92,10 +90,7 @@ def run(args: dict, seed: int = 42) -> dict:
 
     tensorboard_logger = TensorBoardLogger(
         'logs/',
-        name=model_type.name + ' '
-            + args.model_size + ' '
-            + (f'global_only' if args.only_global_detection else '')
-            + date.today().isoformat(),
+        name=args.model_name + ' ' + date.today().isoformat(),
     )
 
     image_logger = ImagePredictionLogger(

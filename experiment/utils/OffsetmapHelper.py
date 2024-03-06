@@ -4,14 +4,16 @@ import torch
 class OffsetmapHelper:
     def __init__(
         self,
-        resized_image_size: Tuple[int, int],
+        resized_image_size: tuple[int, int],
         offset_map_radius: float,
     ):
         self.resized_image_size = resized_image_size
         self.offset_map_radius = offset_map_radius
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu'
+        )
 
-    def _create_offset_maps(
+    def create_offset_maps(
         self,
         targets: torch.Tensor,
     ) -> torch.Tensor:

@@ -3,16 +3,19 @@ from torch import nn
 import torch.nn.functional as F
 from torch.optim import RMSprop
 from torch.optim.lr_scheduler import ExponentialLR
+import lightning as L
 
+from models.losses.MaskedWingLoss import MaskedWingLoss
 from utils.HeatmapHelper import HeatmapHelper
 from utils.OffsetmapHelper import OffsetmapHelper
 
 
-class HeatmapBasedLandmarkDetection:
+class HeatmapBasedLandmarkDetection(L.LightningModule):
     def __init__(
         self,
         global_module: nn.Module,
         local_module: nn.Module,
+        loss: nn.Module,
         point_ids: list[str] = [],
         resized_image_size: tuple[int, int] = (448, 448),
         resized_point_reference_frame_size: tuple[int, int] = (256, 256),
@@ -26,13 +29,15 @@ class HeatmapBasedLandmarkDetection:
     ):
         super().__init__()
 
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=[
+            "global_module",
+            "local_module",
+        ])
 
         self.global_module = global_module
         self.local_module = local_module
 
         self.point_ids = point_ids
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.patch_size = patch_size
         self.resized_point_reference_frame_size = resized_point_reference_frame_size
         self.only_global_detection = only_global_detection
@@ -56,6 +61,8 @@ class HeatmapBasedLandmarkDetection:
             resized_image_size=resized_image_size
         )
 
+        self.loss = loss
+
     @property
     def device(self) -> torch.device:
         return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -77,7 +84,7 @@ class HeatmapBasedLandmarkDetection:
         images: torch.Tensor,
     ) -> torch.Tensor:
         images = self._ensure_correct_image_size(images)
-    
+
         batch_size, channels, height, width = images.shape
 
         output = self.global_module(
@@ -165,25 +172,33 @@ class HeatmapBasedLandmarkDetection:
             refined_predictions
         ) = self.forward_with_heatmaps(images)
 
-        target_global_heatmaps, mask = self._create_heatmaps(targets)
-        target_local_heatmaps, _ = self._create_heatmaps(
+        target_global_heatmaps, mask = self.heatmap_helper.create_heatmaps(
+            targets
+        )
+        target_local_heatmaps = self.heatmap_helper.extract_patches(
+            target_global_heatmaps,
             predictions
         )
-        target_offset_maps = self._create_offset_maps(targets) \
-            if self.use_offset_maps else None
+        target_offset_maps = self.offsetmap_helper.create_offset_maps(
+            targets
+        ) if self.use_offset_maps else None
 
         offset_loss = self.loss(
             offset_maps,
             target_offset_maps
-        ).mean(2) if self.use_offset_maps else 0
+        ).mean([2, 3, 4]) if self.use_offset_maps else 0
 
-        loss = self.loss(
+        global_loss = self.loss(
             global_heatmaps,
             target_global_heatmaps,
-        ) + self.loss(
+        ).mean([2, 3])
+
+        local_loss = self.loss(
             local_heatmaps,
             target_local_heatmaps,
-        ) + offset_loss
+        ).mean([2, 3])
+
+        loss = global_loss + local_loss + offset_loss
 
         masked_loss = loss * mask
 

@@ -27,10 +27,11 @@ class ModelTypes(Enum):
         return {
             'Kim': ModelType(
                 resized_image_size=(800, 800),
-                resized_points_reference_frame_size=(256, 256),
+                resized_point_reference_frame_size=(256, 256),
                 model=lambda *args, **kwargs: HeatmapBasedLandmarkDetection(
                     global_module=KimGlobalModule(),
                     local_module=KimLocalModule(),
+                    loss=nn.BCEWithLogitsLoss(reduction='none'),
                     *args, **kwargs,
                 ),
             ),
@@ -40,6 +41,8 @@ class ModelTypes(Enum):
                 model=lambda *args, **kwargs: HeatmapBasedLandmarkDetection(
                     global_module=YaoGlobalModule(),
                     local_module=YaoLocalModule(),
+                    loss=nn.L1Loss(reduction='none'),
+                    use_offset_maps=True,
                     *args, **kwargs,
                 ),
             ),
@@ -107,11 +110,11 @@ class ModelTypes(Enum):
 
     @staticmethod
     def get_model_type(name: str) -> ModelType:
-        return ModelTypes.model_types()[ModelTypes[name]]
+        return ModelTypes.model_types()[name]
 
     @staticmethod
     def get_model_types() -> list[str]:
         return list(map(
-            lambda x: x.name,
+            lambda x: x,
             list(ModelTypes.model_types().keys())
         ))

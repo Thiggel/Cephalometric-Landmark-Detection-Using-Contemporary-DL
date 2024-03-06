@@ -19,7 +19,7 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
     ):
         super().__init__()
 
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=["model"])
 
         self.reduce_lr_patience = reduce_lr_patience
         self.model = model

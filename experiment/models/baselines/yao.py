@@ -1,14 +1,8 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from torch.optim import Adam, Optimizer
-from torch.optim.lr_scheduler import ReduceLROnPlateau, LRScheduler
-import lightning as L
 
-from models.losses.MaskedWingLoss import MaskedWingLoss
 from models.baselines.aspp.ASPP import ASPP
-from models.baselines.HeatmapBasedLandmarkDetection \
-    import HeatmapBasedLandmarkDetection
 
 
 class GlobalResNetBackbone(nn.Module):
@@ -63,7 +57,7 @@ class YaoGlobalModule(nn.Module):
         self,
         output_size: int = 44
     ):
-        super(GlobalDetectionModule, self).__init__()
+        super().__init__()
 
         self.output_size = output_size
 
@@ -146,124 +140,3 @@ class YaoLocalModule(nn.Module):
         x = self.upsample(x)
 
         return x
-
-
-class YaoLandmarkDetection(
-    L.LightningModule,
-    HeatmapBasedLandmarkDetection
-):
-    def __init__(
-        self,
-        point_ids: list[str] = [],
-        reduce_lr_patience: int = 25,
-        model_size: str = 'tiny',
-        gaussian_sigma: int = 1,
-        gaussian_alpha: float = 0.1,
-        resized_image_size: tuple[int, int] = (576, 512),
-        patch_size: tuple[int, int] = (96, 96),
-        num_points: int = 44,
-        only_global_detection: bool = False,
-        *args,
-        **kwargs,
-    ):
-        super().__init__()
-
-        self.save_hyperparameters()
-
-        self.model_size = model_size
-        self.reduce_lr_patience = reduce_lr_patience
-        self.point_ids = point_ids
-        self.num_points = num_points
-        self.patch_size = patch_size
-        self.resized_image_size = resized_image_size
-        self.resized_point_reference_frame_size = self.resized_image_size
-        self.resized_patch_size = patch_size
-        self.only_global_detection = only_global_detection
-        self.use_offset_maps = True
-        self.offset_map_radius = 20
-
-        self.global_module = GlobalDetectionModule(num_points)
-        self.local_module = LocalCorrectionModule()
-
-        self.loss = nn.L1Loss(reduction='none')
-        self.mm_error = MaskedWingLoss()
-
-    def forward_with_heatmaps(
-        self,
-        images: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        return self.forward_batch(images, self.patch_size)
-
-    def forward(self, images: torch.Tensor) -> torch.Tensor:
-        return self.forward_with_heatmaps(images)[-2]
-
-    def training_step(
-        self,
-        batch: tuple[torch.Tensor, torch.Tensor],
-        batch_idx: int
-    ) -> torch.Tensor:
-        loss, _, _,  _, _ = self.step(batch)
-
-        self.log(
-            'train_loss',
-            loss,
-            on_step=True,
-            on_epoch=True,
-            prog_bar=True
-        )
-
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        loss, unreduced_mm_error, _, _ = self.validation_test_step(batch)
-
-        self.log('val_loss', loss, prog_bar=True)
-        self.log('val_mm_error', unreduced_mm_error.mean(), prog_bar=True)
-
-        return loss
-
-    def test_step(self, batch, batch_idx):
-        (
-            loss,
-            unreduced_mm_error,
-            predictions,
-            targets
-        ) = self.validation_test_step(batch)
-
-        for (id, point_id) in enumerate(self.point_ids):
-            self.log(f'{point_id}_mm_error', unreduced_mm_error[id].mean())
-
-        self.log('test_loss', loss, prog_bar=True)
-        self.log('test_mm_error', unreduced_mm_error.mean(), prog_bar=True)
-
-        self.log(
-            'percent_under_1mm',
-            self.mm_error.percent_under_n_mm(predictions, targets, 1)
-        )
-        self.log(
-            'percent_under_2mm',
-            self.mm_error.percent_under_n_mm(predictions, targets, 2)
-        )
-        self.log(
-            'percent_under_3mm',
-            self.mm_error.percent_under_n_mm(predictions, targets, 3)
-        )
-        self.log(
-            'percent_under_4mm',
-            self.mm_error.percent_under_n_mm(predictions, targets, 4)
-        )
-
-        return loss
-
-    def configure_optimizers(self) -> tuple[Optimizer, LRScheduler]:
-        optimizer = Adam(self.parameters(), lr=0.001)
-        scheduler = ReduceLROnPlateau(
-            optimizer,
-            patience=self.reduce_lr_patience
-        )
-
-        return {
-            'optimizer': optimizer,
-            'lr_scheduler': scheduler,
-            'monitor': 'val_loss'
-        }

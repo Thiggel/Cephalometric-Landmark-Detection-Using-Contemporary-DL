@@ -17,6 +17,51 @@ class HeatmapHelper:
         self.resized_patch_size = self._get_resized_patch_size()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    def _ensure_correct_point_reference_frame_size(
+        self,
+        points: torch.Tensor,
+    ) -> torch.Tensor:
+        if self.resized_point_reference_frame_size != self.resized_image_size:
+            points = points * (
+                self.resized_point_reference_frame_size[0] / self.resized_image_size[0]
+            )
+
+        return points
+
+    def refine_point_predictions(
+        self,
+        local_heatmaps: torch.Tensor,
+        point_predictions: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Refine point predictions by finding the highest
+        point in the local heatmaps. The offset of these points
+        will be in reference to the patch_size, so we need to
+        subtract the patch_size of the original points before
+        adding the refined points.
+        Also, if the patches were taken from the original image,
+        so that the resized_point_reference_frame_size
+        is different than the resized_image_size, the points
+        need to be adjusted accordingly.
+        """
+        highest_points = self.get_highest_points(local_heatmaps)
+
+        highest_points = self._ensure_correct_point_reference_frame_size(
+            highest_points
+        )
+
+        padding_height, padding_width = self._get_padding_size(
+            self.resized_patch_size
+        ),
+
+        point_predictions -= torch.tensor(
+            padding_width, padding_height, device=point_predictions.device
+        )
+
+        point_predictions += highest_points
+
+        return point_predictions
+
     def get_highest_points(
         self,
         heatmaps: torch.Tensor
@@ -119,9 +164,6 @@ class HeatmapHelper:
         horizontal_strip: torch.Tensor,
         y_indices: torch.Tensor
     ) -> torch.Tensor:
-        """
-        The horizontal strip is pasted back into the global heatmaps
-        """
         return torch.scatter(
             global_heatmaps,
             -2,
@@ -135,10 +177,7 @@ class HeatmapHelper:
         local_heatmaps: torch.Tensor,
         x_indices: torch.Tensor,
     ) -> torch.Tensor:
-        """
-        The local heatmaps are pasted into the horizontal strip
-        """
-        strip_with_patch = torch.scatter(
+        return torch.scatter(
             horizontal_strip,
             -1,
             x_indices,
