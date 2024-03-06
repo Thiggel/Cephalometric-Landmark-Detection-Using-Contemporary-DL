@@ -9,7 +9,7 @@ from models.ViT import Downscaling
 class ConvNextV2(nn.Module):
     def __init__(
         self,
-        model_type: str = 'tiny',
+        model_name: str,
         output_size: int = 44,
         *args,
         **kwargs

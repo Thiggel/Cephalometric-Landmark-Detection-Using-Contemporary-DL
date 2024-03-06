@@ -31,11 +31,7 @@ def get_args() -> dict:
     parser.add_argument(
         '--model_name',
         type=str,
-        default=ModelTypes.ViT.name,
         choices=ModelTypes.get_model_types()
-    )
-    parser.add_argument(
-        '--model_size', type=str, default='tiny', choices=['tiny', 'normal', 'large']
     )
     parser.add_argument('--splits', type=tuple, default=(0.8, 0.1, 0.1))
     parser.add_argument('--batch_size', type=int, default=32)
@@ -44,17 +40,6 @@ def get_args() -> dict:
     parser.add_argument('--test_only', action=argparse.BooleanOptionalAction)
     parser.add_argument('--num_runs', type=int, default=1)
     parser.add_argument('--max_hours_per_run', type=int, default=5)
-    parser.add_argument(
-        '--optimizer',
-        type=str,
-        default='adam',
-        choices=['adam', 'sgd', 'rmsprop', 'sgd_momentum']
-    )
-    parser.add_argument(
-        '--only_global_detection',
-        action=argparse.BooleanOptionalAction,
-        default=False
-    )
 
     args = parser.parse_args()
 
@@ -77,20 +62,18 @@ def run(args: dict, seed: int = 42) -> dict:
         csv_file=args.csv_file,
         splits=args.splits,
         batch_size=args.batch_size,
-        crop=model_type.crop,
-        resized_images_shape=model_type.resized_images_shape,
-        resized_points_reference_frame_shape=model_type.resized_points_reference_frame_shape,
+        resized_image_size=model_type.resized_image_size,
+        resized_point_reference_frame_size=model_type.resized_point_reference_frame_size,
     )
 
     model_args = {
         'model_name': args.model_name,
         'point_ids': datamodule.dataset.point_ids,
         'model_size': args.model_size,
-        'resized_images_shape': model_type.resized_images_shape,
-        'resized_points_reference_frame_shape':
-            model_type.resized_points_reference_frame_shape,
+        'resized_image_size': model_type.resized_image_size,
+        'resized_point_reference_frame_size':
+            model_type.resized_point_reference_frame_size,
         'optimizer': args.optimizer,
-        'only_global_detection': args.only_global_detection,
     }
 
     model = model_type.initialize(**model_args)
@@ -117,8 +100,8 @@ def run(args: dict, seed: int = 42) -> dict:
 
     image_logger = ImagePredictionLogger(
         num_samples=5,
-        resized_images_shape=model_type.resized_images_shape,
-        resized_points_reference_frame_shape=model_type.resized_points_reference_frame_shape,
+        resized_image_size=model_type.resized_image_size,
+        resized_point_reference_frame_size=model_type.resized_point_reference_frame_size,
     )
     heatmap_logger = HeatmapPredictionLogger(
         num_samples=5,
@@ -143,7 +126,7 @@ def run(args: dict, seed: int = 42) -> dict:
         enable_checkpointing=True,
         logger=tensorboard_logger,
         accelerator='gpu' if torch.cuda.is_available() else 'cpu',
-        devices='auto'
+        devices='auto',
     )
 
     if args.checkpoint:

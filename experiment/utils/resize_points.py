@@ -3,13 +3,13 @@ import torch
 
 def resize_points(
     points: torch.Tensor,
-    resized_images_shape: tuple[int, int],
-    resized_points_reference_frame_shape: tuple[int, int]
+    resized_image_size: tuple[int, int],
+    resized_point_reference_frame_size: tuple[int, int]
 ) -> torch.Tensor:
     resize_factor = (
-        torch.tensor(resized_images_shape, device=points.device)
+        torch.tensor(resized_image_size, device=points.device)
         / torch.tensor(
-            resized_points_reference_frame_shape,
+            resized_point_reference_frame_size,
             device=points.device
         )
     ).unsqueeze(0).unsqueeze(0)

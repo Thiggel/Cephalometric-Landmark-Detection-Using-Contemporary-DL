@@ -4,16 +4,17 @@ import torch.nn as nn
 
 from models.DirectPointPredictionBasedLandmarkDetection import \
     DirectPointPredictionBasedLandmarkDetection
-from models.baselines.yao import YaoLandmarkDetection
-from models.baselines.kim import KimLandmarkDetection
+from models.ViT import ViT
+from models.ConvNextV2 import ConvNextV2
+from models.HeatmapBasedLandmarkDetection import HeatmapBasedLandmarkDetection
+from models.baselines.yao import YaoGlobalModule, YaoLocalModule
+from models.baselines.kim import KimGlobalModule, KimLocalModule
 
 
 @dataclass
 class ModelType:
-    name: str
-    crop: bool
-    resized_images_shape: tuple[int, int]
-    resized_points_reference_frame_shape: tuple[int, int]
+    resized_image_size: tuple[int, int]
+    resized_point_reference_frame_size: tuple[int, int]
     model: nn.Module
 
     def initialize(self, *args, **kwargs) -> nn.Module:
@@ -21,57 +22,86 @@ class ModelType:
 
 
 class ModelTypes(Enum):
-    ViT = "ViT"
-    ViTLarge = "ViTLarge"
-    ViTWithDownscaling = "ViTWithDownscaling"
-    ConvNextV2 = "ConvNextV2"
-    Yao = "Yao"
-    Kim = "Kim"
-
     @staticmethod
     def model_types():
         return {
-            ModelTypes.Kim: ModelType(
-                name='Kim',
-                crop=False,
-                resized_images_shape=(800, 800),#(448, 448),
-                resized_points_reference_frame_shape=(256, 256),
-                model=KimLandmarkDetection
+            'Kim': ModelType(
+                resized_image_size=(800, 800),
+                resized_points_reference_frame_size=(256, 256),
+                model=lambda *args, **kwargs: HeatmapBasedLandmarkDetection(
+                    global_module=KimGlobalModule(),
+                    local_module=KimLocalModule(),
+                    *args, **kwargs,
+                ),
             ),
-            ModelTypes.ViT: ModelType(
-                name='ViT',
-                crop=False,
-                resized_images_shape=(224, 224),
-                resized_points_reference_frame_shape=(224, 224),
-                model=DirectPointPredictionBasedLandmarkDetection
+            'Yao': ModelType(
+                resized_image_size=(576, 512),
+                resized_point_reference_frame_size=(576, 512),
+                model=lambda *args, **kwargs: HeatmapBasedLandmarkDetection(
+                    global_module=YaoGlobalModule(),
+                    local_module=YaoLocalModule(),
+                    *args, **kwargs,
+                ),
             ),
-            ModelTypes.ViTLarge: ModelType(
-                name='ViTLarge',
-                crop=False,
-                resized_images_shape=(384, 384),
-                resized_points_reference_frame_shape=(384, 384),
-                model=DirectPointPredictionBasedLandmarkDetection
+            'ViTSmall': ModelType(
+                resized_image_size=(224, 224),
+                resized_point_reference_frame_size=(224, 224),
+                model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
+                    model=ViT(
+                        model_name='WinKawaks/vit-small-patch16-224' 
+                    ),
+                    *args, **kwargs,
+                ),
             ),
-            ModelTypes.ViTWithDownscaling: ModelType(
-                name='ViTWithDownscaling',
-                crop=False,
-                resized_images_shape=(450, 450),
-                resized_points_reference_frame_shape=(450, 450),
-                model=DirectPointPredictionBasedLandmarkDetection
+            'ViTBase': ModelType(
+                resized_image_size=(224, 224),
+                resized_point_reference_frame_size=(224, 224),
+                model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
+                    model=ViT(
+                        model_name='google/vit-base-patch16-224-in21k'
+                    ),
+                    *args, **kwargs,
+                ),
             ),
-            ModelTypes.ConvNextV2: ModelType(
-                name='ConvNextV2',
-                crop=False,
-                resized_images_shape=(224, 224),
-                resized_points_reference_frame_shape=(224, 224),
-                model=DirectPointPredictionBasedLandmarkDetection
+            'ViTLargeImageSize': ModelType(
+                resized_image_size=(384, 384),
+                resized_point_reference_frame_size=(384, 384),
+                model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
+                    model=ViT(
+                        model_name='timm/vit_small_patch16_384.augreg_in21k_ft_in1k'
+                    ),
+                    *args, **kwargs,
+                ),
             ),
-            ModelTypes.Yao: ModelType(
-                name='Yao',
-                crop=False,
-                resized_images_shape=(576, 512),
-                resized_points_reference_frame_shape=(576, 512),
-                model=YaoLandmarkDetection
+            'ConvNextV2Small': ModelType(
+                resized_image_size=(224, 224),
+                resized_point_reference_frame_size=(224, 224),
+                model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
+                    model=ConvNextV2(
+                        model_name='facebook/convnextv2-tiny-22k-224',
+                    ),
+                    *args, **kwargs,
+                ),
+            ),
+            'ConvNextV2Base': ModelType(
+                resized_image_size=(224, 224),
+                resized_point_reference_frame_size=(224, 224),
+                model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
+                    model=ConvNextV2(
+                        model_name='facebook/convnextv2-base-22k-224',
+                    ),
+                    *args, **kwargs,
+                ),
+            ),
+            'ConvNextV2LargeImageSize': ModelType(
+                resized_image_size=(384, 384),
+                resized_point_reference_frame_size=(384, 384),
+                model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
+                    model=ConvNextV2(
+                        model_name='facebook/convnextv2-tiny-22k-384',
+                    ),
+                    *args, **kwargs,
+                ),
             ),
         }
 

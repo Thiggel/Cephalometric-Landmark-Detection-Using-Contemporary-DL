@@ -13,8 +13,7 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
         model: nn.Module,
         point_ids: list[str],
         reduce_lr_patience: int = 25,
-        model_size: str = 'tiny',
-        optimizer: str = 'adam',
+        optimizer: str = 'sgd_momentum',
         *args,
         **kwargs
     ):
@@ -22,7 +21,6 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
 
         self.save_hyperparameters()
 
-        self.model_size = model_size
         self.reduce_lr_patience = reduce_lr_patience
         self.model = model
         self.point_ids = point_ids

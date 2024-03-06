@@ -58,7 +58,7 @@ class GlobalResNetBackbone(nn.Module):
         return upsample3
 
 
-class GlobalDetectionModule(nn.Module, HeatmapBasedLandmarkDetection):
+class YaoGlobalModule(nn.Module):
     def __init__(
         self,
         output_size: int = 44
@@ -121,7 +121,7 @@ class LocalResNetBackbone(nn.Module):
         return self.backbone[4](x)
 
 
-class LocalCorrectionModule(nn.Module, HeatmapBasedLandmarkDetection):
+class YaoLocalModule(nn.Module):
     def __init__(self):
         super().__init__()
 
@@ -159,7 +159,7 @@ class YaoLandmarkDetection(
         model_size: str = 'tiny',
         gaussian_sigma: int = 1,
         gaussian_alpha: float = 0.1,
-        resized_images_shape: tuple[int, int] = (576, 512),
+        resized_image_size: tuple[int, int] = (576, 512),
         patch_size: tuple[int, int] = (96, 96),
         num_points: int = 44,
         only_global_detection: bool = False,
@@ -175,9 +175,9 @@ class YaoLandmarkDetection(
         self.point_ids = point_ids
         self.num_points = num_points
         self.patch_size = patch_size
-        self.resized_images_shape = resized_images_shape
-        self.resized_points_reference_frame_shape = self.resized_images_shape
-        self.resized_patch_shape = patch_size
+        self.resized_image_size = resized_image_size
+        self.resized_point_reference_frame_size = self.resized_image_size
+        self.resized_patch_size = patch_size
         self.only_global_detection = only_global_detection
         self.use_offset_maps = True
         self.offset_map_radius = 20
