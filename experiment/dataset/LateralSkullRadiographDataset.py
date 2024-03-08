@@ -17,8 +17,8 @@ class LateralSkullRadiographDataset(Dataset):
         root_dir: str,
         csv_file: str,
         crop: bool = False,
-        resize_to: tuple[int, int] = (224, 224),
-        resize_points_to_aspect_ratio: tuple[int, int] = (224, 224),
+        resized_image_size: tuple[int, int] = (224, 224),
+        resized_point_reference_frame_size: tuple[int, int] = (224, 224),
         transform: transforms.Compose = transforms.Compose([
             transforms.ColorJitter(
                 brightness=0.5,
@@ -37,11 +37,11 @@ class LateralSkullRadiographDataset(Dataset):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.root_dir = root_dir
         self.crop = crop
-        self.resize = transforms.Resize(resize_to)
+        self.resize = transforms.Resize(resized_image_size)
         self.to_tensor = transforms.ToTensor()
-        self.resize_to = resize_to
-        self.resize_points_to_aspect_ratio = resize_points_to_aspect_ratio \
-            if resize_points_to_aspect_ratio is not None else resize_to
+        self.resized_image_size = resized_image_size
+        self.resized_point_reference_frame_size = resized_point_reference_frame_size\
+            if resized_point_reference_frame_size is not None else resized_image_size
         self.transform = transform
         self.flip_augmentations = flip_augmentations
 
@@ -95,11 +95,11 @@ class LateralSkullRadiographDataset(Dataset):
 
     @property
     def _saved_images_path(self) -> str:
-        return os.path.join(self.root_dir, f'images_{self.resize_to}.pt')
+        return os.path.join(self.root_dir, f'images_{self.resized_image_size}.pt')
 
     @property
     def _saved_points_path(self) -> str:
-        return os.path.join(self.root_dir, f'points_{self.resize_points_to_aspect_ratio}.pt')
+        return os.path.join(self.root_dir, f'points_{self.resized_point_reference_frame_size}.pt')
 
     def _load_dataset(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         images = []
@@ -156,8 +156,8 @@ class LateralSkullRadiographDataset(Dataset):
         return ids
 
     def _resize_point(self, point: dict[str, float]) -> dict[str, float]:
-        x_ratio = self.resize_points_to_aspect_ratio[1] / self.original_image_size[1]
-        y_ratio = self.resize_points_to_aspect_ratio[0] / self.original_image_size[0]
+        x_ratio = self.resized_point_reference_frame_size[1] / self.original_image_size[1]
+        y_ratio = self.resized_point_reference_frame_size[0] / self.original_image_size[0]
 
         return [
             point['x'] * x_ratio,
@@ -213,7 +213,7 @@ class LateralSkullRadiographDataset(Dataset):
 
         flipped_points = points.clone()
 
-        flipped_points[..., 0] = self.resize_points_to_aspect_ratio[1] - flipped_points[..., 0]
+        flipped_points[..., 0] = self.resized_point_reference_frame_size[1] - flipped_points[..., 0]
 
         flipped_points = self._handle_invalid_points(
             points,
@@ -231,7 +231,7 @@ class LateralSkullRadiographDataset(Dataset):
 
         flipped_points = points.clone()
 
-        flipped_points[..., 1] = self.resize_points_to_aspect_ratio[0] - flipped_points[..., 1]
+        flipped_points[..., 1] = self.resized_point_reference_frame_size[0] - flipped_points[..., 1]
 
         flipped_points = self._handle_invalid_points(
             points,

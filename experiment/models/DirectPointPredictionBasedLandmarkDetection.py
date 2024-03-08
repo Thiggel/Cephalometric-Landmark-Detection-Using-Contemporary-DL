@@ -4,43 +4,29 @@ from torch import nn
 from torch.optim import RMSprop, Adam, SGD
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from models.ViT import ViT
-from models.ConvNextV2 import ConvNextV2
 from models.losses.MaskedWingLoss import MaskedWingLoss
 
 
-class CephalometricLandmarkDetector(L.LightningModule):
+class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
     def __init__(
         self,
-        model_name: str,
+        model: nn.Module,
         point_ids: list[str],
         reduce_lr_patience: int = 25,
-        model_size: str = 'tiny',
-        optimizer: str = 'adam',
+        optimizer: str = 'sgd_momentum',
         *args,
         **kwargs
     ):
         super().__init__()
 
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=["model"])
 
-        self.model_size = model_size
         self.reduce_lr_patience = reduce_lr_patience
-        self.model = self._init_model(model_name)
+        self.model = model
         self.point_ids = point_ids
         self.optimizer_name = optimizer
 
         self.loss = MaskedWingLoss()
-
-    def _init_model(self, model_name: str) -> nn.Module:
-        model_types = {
-            'ViT': lambda model_size: ViT(model_size, downscale=False),
-            'ViTLarge': lambda model_size: ViT(model_size, downscale=False),
-            'ViTWithDownscaling': lambda model_size: ViT(model_size, downscale=True),
-            'ConvNextV2': lambda model_size: ConvNextV2(model_size),
-        }
-
-        return model_types[model_name](self.model_size)
 
     def forward(self, x):
         return self.model(x)

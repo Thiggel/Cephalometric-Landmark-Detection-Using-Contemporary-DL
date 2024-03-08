@@ -16,8 +16,8 @@ class LateralSkullRadiographDataModule(L.LightningDataModule):
         splits: tuple[int, int, int] = (0.8, 0.1, 0.1),
         batch_size: int = 32,
         crop: bool = False,
-        resize_to: tuple[int, int] = (224, 224),
-        resize_points_to_aspect_ratio: tuple[int, int] = (224, 224),
+        resized_image_size: tuple[int, int] = (224, 224),
+        resized_point_reference_frame_size: tuple[int, int] = (224, 224),
     ):
         super().__init__()
 
@@ -26,8 +26,8 @@ class LateralSkullRadiographDataModule(L.LightningDataModule):
             csv_file=csv_file,
             transform=transform,
             crop=crop,
-            resize_to=resize_to,
-            resize_points_to_aspect_ratio=resize_points_to_aspect_ratio
+            resized_image_size=resized_image_size,
+            resized_point_reference_frame_size=resized_point_reference_frame_size
         )
 
         self.train_dataset, self.val_dataset, self.test_dataset = random_split(
