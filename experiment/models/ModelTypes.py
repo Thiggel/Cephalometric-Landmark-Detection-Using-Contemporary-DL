@@ -57,8 +57,8 @@ class ModelTypes(Enum):
                 ),
             ),
             'ViTSmallWithDownscaling': ModelType(
-                resized_image_size=(450, 450),
-                resized_point_reference_frame_size=(450, 450),
+                resized_image_size=(902, 902),
+                resized_point_reference_frame_size=(902, 902),
                 model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
                     model=ViT(
                         model_name='WinKawaks/vit-small-patch16-224',

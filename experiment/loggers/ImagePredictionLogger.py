@@ -12,12 +12,14 @@ class ImagePredictionLogger(Callback):
         self,
         num_samples: int,
         resized_image_size: tuple[int, int],
-        resized_point_reference_frame_size: tuple[int, int]
+        resized_point_reference_frame_size: tuple[int, int],
+        model_name: str
     ):
         super().__init__()
         self.num_samples = num_samples
         self.resized_image_size = resized_image_size
         self.resized_point_reference_frame_size = resized_point_reference_frame_size
+        self.module_name = model_name
 
     def on_validation_epoch_start(
         self,

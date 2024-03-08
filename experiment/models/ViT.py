@@ -6,16 +6,23 @@ from transformers import ViTModel
 class Downscaling(nn.Sequential):
     def __init__(self):
         super().__init__(
-            # input shape: 450, 450, 1
+            # input shape: 902, 902, 1
             nn.Conv2d(
                 in_channels=1,
                 out_channels=3,
                 kernel_size=3,
             ),
-            nn.MaxPool2d(2),
             nn.BatchNorm2d(3),
             nn.ReLU(),
-            # output shape: 224, 224, 3
+            nn.MaxPool2d(2),
+            nn.Conv2d(
+                in_channels=3,
+                out_channels=3,
+                kernel_size=3,
+            ),
+            nn.BatchNorm2d(3),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
         )
 
 

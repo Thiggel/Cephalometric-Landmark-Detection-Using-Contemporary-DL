@@ -97,10 +97,11 @@ def run(args: dict, seed: int = 42) -> dict:
         num_samples=5,
         resized_image_size=model_type.resized_image_size,
         resized_point_reference_frame_size=model_type.resized_point_reference_frame_size,
+        model_name=args.model_name,
     )
     heatmap_logger = HeatmapPredictionLogger(
         num_samples=5,
-        module_name=model_type.name + ' ' + args.model_size
+        module_name=args.model_name,
     )
 
     stats_monitor = DeviceStatsMonitor()
