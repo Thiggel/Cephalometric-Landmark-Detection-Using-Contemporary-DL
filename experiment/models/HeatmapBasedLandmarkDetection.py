@@ -73,7 +73,7 @@ class HeatmapBasedLandmarkDetection(L.LightningModule):
     ) -> torch.Tensor:
         if images.shape[-2:] != self.resized_point_reference_frame_size:
             images = F.interpolate(
-                x,
+                images,
                 size=self.resized_point_reference_frame_size
             )
 
