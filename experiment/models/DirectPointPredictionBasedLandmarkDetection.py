@@ -1,8 +1,8 @@
 import lightning as L
 import torch
 from torch import nn
-from torch.optim import RMSprop, Adam, SGD
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim import RMSprop, AdamW, SGD
+from torch.optim.lr_scheduler import ReduceLROnPlateau, LambdaLR, CosineAnnealingLR
 
 from models.losses.MaskedWingLoss import MaskedWingLoss
 
@@ -13,7 +13,7 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
         model: nn.Module,
         point_ids: list[str],
         reduce_lr_patience: int = 25,
-        optimizer: str = 'sgd_momentum',
+        optimizer: str = 'adam',
         *args,
         **kwargs
     ):
@@ -120,7 +120,7 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
 
     def get_optimizer(self, optimizer: str) -> torch.optim.Optimizer:
         optimizers = {
-            'adam': lambda: Adam(self.parameters(), lr=0.001),
+            'adam': lambda: AdamW(self.parameters(), lr=0.001, betas=(0.9, 0.95)),
             'rmsprop': lambda: RMSprop(self.parameters(), lr=0.001),
             'sgd': lambda: SGD(self.parameters(), lr=0.001),
             'sgd_momentum': lambda: SGD(
@@ -134,13 +134,13 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
 
     def configure_optimizers(self) -> dict:
         optimizer = self.get_optimizer(self.optimizer_name)
-        scheduler = ReduceLROnPlateau(
-            optimizer,
-            patience=self.reduce_lr_patience
-        )
-
         return {
             'optimizer': optimizer,
-            'lr_scheduler': scheduler,
-            'monitor': 'val_loss'
+            'lr_scheduler': {
+                'scheduler': ReduceLROnPlateau(
+                    optimizer,
+                    patience=self.reduce_lr_patience
+                ),
+                'monitor': 'val_loss'
+            },
         }
