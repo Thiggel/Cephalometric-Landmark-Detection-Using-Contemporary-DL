@@ -115,28 +115,29 @@ def run(args: dict, seed: int = 42) -> dict:
     if isinstance(model, HeatmapBasedLandmarkDetection):
         callbacks.append(heatmap_logger)
 
-    trainer = L.Trainer(
-        max_time={'hours': args.max_hours_per_run},
-        max_epochs=10_000,
-        callbacks=callbacks,
-        enable_checkpointing=True,
-        logger=tensorboard_logger,
-        accelerator='gpu' if torch.cuda.is_available() else 'cpu',
-        devices='auto',
-    )
+    trainer_args = {
+        'max_time': {'hours': args.max_hours_per_run},
+        'max_epochs': 10_000,
+        'callbacks': callbacks,
+        'enable_checkpointing': True,
+        'logger': tensorboard_logger,
+        'accelerator': 'gpu' if torch.cuda.is_available() else 'cpu',
+        'devices': 'auto',
+    }
 
-    if args.checkpoint:
-        print(f'Loading checkpoint {args.checkpoint}...')
-        model = model_type.model.load_from_checkpoint(
-            args.checkpoint
-        )
-        print('Done!')
+    if args.checkpoint is not None:
+        trainer_args['resume_from_checkpoint'] = args.checkpoint
+
+
+    trainer = L.Trainer(
+        **trainer_args
+    )
 
     if not args.test_only:
         trainer.fit(model=model, datamodule=datamodule)
 
-        model = model_type.model.load_from_checkpoint(
-            trainer.checkpoint_callback.best_model_path
+        model.load_state_dict(
+            torch.load(checkpoint_callback.best_model_path)['state_dict']
         )
 
     return trainer.test(model=model, datamodule=datamodule)

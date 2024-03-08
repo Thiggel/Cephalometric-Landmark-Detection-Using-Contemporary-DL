@@ -56,6 +56,28 @@ class ModelTypes(Enum):
                     *args, **kwargs,
                 ),
             ),
+            'ViTSmallWithDownscaling': ModelType(
+                resized_image_size=(450, 450),
+                resized_point_reference_frame_size=(450, 450),
+                model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
+                    model=ViT(
+                        model_name='WinKawaks/vit-small-patch16-224',
+                        downscale=True,
+                    ),
+                    *args, **kwargs,
+                ),
+            ),
+            'ViTSmallWithComplexMLPHead': ModelType(
+                resized_image_size=(224, 224),
+                resized_point_reference_frame_size=(224, 224),
+                model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
+                    model=ViT(
+                        model_name='WinKawaks/vit-small-patch16-224',
+                        complex_mlp_head=True,
+                    ),
+                    *args, **kwargs,
+                ),
+            ),
             'ViTBase': ModelType(
                 resized_image_size=(224, 224),
                 resized_point_reference_frame_size=(224, 224),
@@ -71,7 +93,7 @@ class ModelTypes(Enum):
                 resized_point_reference_frame_size=(384, 384),
                 model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
                     model=ViT(
-                        model_name='timm/vit_small_patch16_384.augreg_in21k_ft_in1k'
+                        model_name='google/vit-base-patch16-384'
                     ),
                     *args, **kwargs,
                 ),
