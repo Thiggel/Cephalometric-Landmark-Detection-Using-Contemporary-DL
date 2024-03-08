@@ -1,7 +1,7 @@
 import lightning as L
 import torch
 from torch import nn
-from torch.optim import RMSprop, AdamW, SGD
+from torch.optim import RMSprop, Adam, SGD
 from torch.optim.lr_scheduler import ReduceLROnPlateau, LambdaLR, CosineAnnealingLR
 
 from models.losses.MaskedWingLoss import MaskedWingLoss
@@ -120,7 +120,7 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
 
     def get_optimizer(self, optimizer: str) -> torch.optim.Optimizer:
         optimizers = {
-            'adam': lambda: AdamW(self.parameters(), lr=0.001, betas=(0.9, 0.95)),
+            'adam': lambda: Adam(self.parameters(), lr=0.001),
             'rmsprop': lambda: RMSprop(self.parameters(), lr=0.001),
             'sgd': lambda: SGD(self.parameters(), lr=0.001),
             'sgd_momentum': lambda: SGD(
@@ -134,6 +134,19 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
 
     def configure_optimizers(self) -> dict:
         optimizer = self.get_optimizer(self.optimizer_name)
+
+        datamodule = self.trainer.datamodule
+        train_dataloader = datamodule.train_dataloader()
+
+        # Linear warmup scheduler
+        def warmup_lr_lambda(current_step):
+            if current_step <= self.warmup_epochs * len(train_dataloader):
+                return current_step / (self.warmup_epochs * len(train_dataloader))
+            else:
+                return 1.0
+
+        warmup_scheduler = LambdaLR(optimizer, lr_lambda=warmup_lr_lambda)
+
         return {
             'optimizer': optimizer,
             'lr_scheduler': {
