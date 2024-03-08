@@ -11,17 +11,6 @@ class ImagePredictionLogger(Callback):
     def __init__(
         self,
         num_samples: int,
-<<<<<<< HEAD
-        resize_to: tuple[int, int],
-        resize_points_to_aspect_ratio: tuple[int, int],
-        module_name: str
-    ):
-        super().__init__()
-        self.num_samples = num_samples
-        self.resize_to = resize_to
-        self.resize_points_to_aspect_ratio = resize_points_to_aspect_ratio
-        self.module_name = module_name
-=======
         resized_image_size: tuple[int, int],
         resized_point_reference_frame_size: tuple[int, int]
     ):
@@ -29,7 +18,6 @@ class ImagePredictionLogger(Callback):
         self.num_samples = num_samples
         self.resized_image_size = resized_image_size
         self.resized_point_reference_frame_size = resized_point_reference_frame_size
->>>>>>> reorganize-project
 
     def on_validation_epoch_start(
         self,
