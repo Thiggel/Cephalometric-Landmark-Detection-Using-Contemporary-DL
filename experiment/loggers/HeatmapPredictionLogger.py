@@ -5,7 +5,6 @@ from lightning import Trainer, LightningModule
 import os
 
 from utils.clamp_points import clamp_points
-from utils.resize_points import resize_points
 
 
 class HeatmapPredictionLogger(Callback):
