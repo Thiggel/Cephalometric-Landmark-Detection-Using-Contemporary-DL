@@ -4,7 +4,6 @@ import torchvision
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from dataLoader import Rescale, RandomCrop, ToTensor, LandmarksDataset
-from LateralSkullRadiographDataModule import LateralSkullRadiographDataModule
 import models
 import train
 import lossFunction
@@ -33,9 +32,6 @@ parser.add_argument("--unsupervised_dataset", type=str, default="cepha/")
 parser.add_argument("--trainingSetCsv", type=str, default="cepha_train.csv")
 parser.add_argument("--testSetCsv", type=str, default="cepha_val.csv")
 parser.add_argument("--unsupervisedCsv", type=str, default="cepha_val.csv")
-parser.add_argument(
-    "--new_dataset", action=argparse.BooleanOptionalAction, default=False
-)
 
 
 def main():
@@ -46,53 +42,42 @@ def main():
     print("image scale ", config.image_scale)
     print("GPU: ", config.use_gpu)
 
-    if not config.new_dataset:
-        transform_origin = torchvision.transforms.Compose(
-            [Rescale(config.image_scale), ToTensor()]
-        )
+    transform_origin = torchvision.transforms.Compose(
+        [Rescale(config.image_scale), ToTensor()]
+    )
 
-        train_dataset_origin = LandmarksDataset(
-            csv_file=config.dataRoot + config.trainingSetCsv,
-            root_dir=config.dataRoot + config.supervised_dataset_train,
-            transform=transform_origin,
-            landmarksNum=config.landmarkNum,
-        )
+    train_dataset_origin = LandmarksDataset(
+        csv_file=config.dataRoot + config.trainingSetCsv,
+        root_dir=config.dataRoot + config.supervised_dataset_train,
+        transform=transform_origin,
+        landmarksNum=config.landmarkNum,
+    )
 
-        val_dataset = LandmarksDataset(
-            csv_file=config.dataRoot + config.testSetCsv,
-            root_dir=config.dataRoot + config.supervised_dataset_test,
-            transform=transform_origin,
-            landmarksNum=config.landmarkNum,
-        )
+    val_dataset = LandmarksDataset(
+        csv_file=config.dataRoot + config.testSetCsv,
+        root_dir=config.dataRoot + config.supervised_dataset_test,
+        transform=transform_origin,
+        landmarksNum=config.landmarkNum,
+    )
 
-        train_dataloader_t = DataLoader(
-            train_dataset_origin,
-            batch_size=config.batchSize,
-            shuffle=False,
-            num_workers=18,
-        )
+    train_dataloader_t = DataLoader(
+        train_dataset_origin,
+        batch_size=config.batchSize,
+        shuffle=False,
+        num_workers=18,
+    )
 
-        val_dataloader_t = DataLoader(
-            val_dataset, batch_size=config.batchSize, shuffle=False, num_workers=18
-        )
-        train_dataloader = []
-        val_dataloader = []
-        # pre-load all data into memory for efficient training
-        for data in tqdm(train_dataloader_t):
-            train_dataloader.append(data)
+    val_dataloader_t = DataLoader(
+        val_dataset, batch_size=config.batchSize, shuffle=False, num_workers=18
+    )
+    train_dataloader = []
+    val_dataloader = []
+    # pre-load all data into memory for efficient training
+    for data in tqdm(train_dataloader_t):
+        train_dataloader.append(data)
 
-        for data in tqdm(val_dataloader_t):
-            val_dataloader.append(data)
-
-    else:
-        datamodule = LateralSkullRadiographDataModule(
-            resized_image_size=config.image_scale,
-            resized_point_reference_frame_size=config.image_scale,
-            batch_size=config.batchSize,
-        )
-
-        train_dataloader = list(datamodule.train_dataloader())
-        val_dataloader = list(datamodule.val_dataloader())
+    for data in tqdm(val_dataloader_t):
+        val_dataloader.append(data)
 
     print(len(train_dataloader), len(val_dataloader))
 
@@ -106,7 +91,7 @@ def main():
 
     # if use_gpu:
     model_ft = model_ft.cuda(config.use_gpu)
-    criterion = lossFunction.fusionLossFunc_improved(config)
+    criterion = lossFunction.HeatmapOffsetmapLoss(config)
 
     optimizer_ft = optim.Adadelta(
         filter(lambda p: p.requires_grad, model_ft.parameters()), lr=1.0
