@@ -9,9 +9,7 @@ class OffsetmapHelper:
     ):
         self.resized_image_size = resized_image_size
         self.offset_map_radius = offset_map_radius
-        self.device = torch.device(
-            'cuda' if torch.cuda.is_available() else 'cpu'
-        )
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def create_offset_maps(
         self,
@@ -30,12 +28,11 @@ class OffsetmapHelper:
         x, y = targets.split(1, dim=-1)
         x = x.unsqueeze(-1)
         y = y.unsqueeze(-1)
-        x_offset_maps = (x - x_grid).abs().unsqueeze(2)
-        y_offset_maps = (y - y_grid).abs().unsqueeze(2)
+        x_offset_maps = (x - x_grid).unsqueeze(2)
+        y_offset_maps = (y - y_grid).unsqueeze(2)
 
-        offset_maps = torch.cat([
-            x_offset_maps,
-            y_offset_maps
-        ], dim=2) / self.offset_map_radius
+        offset_maps = (
+            torch.cat([x_offset_maps, y_offset_maps], dim=2) / self.offset_map_radius
+        )
 
         return offset_maps
