@@ -26,9 +26,9 @@ class MaskedWingLoss(nn.Module):
 
     def _get_px_per_m(
         self,
-        old_px_per_m: int,
-        original_image_size: tuple[int, int],
-        resized_image_size: tuple[int, int],
+        old_px_per_m: int = 7_756,
+        original_image_size: tuple[int, int] = (1360, 1840),
+        resized_image_size: tuple[int, int] = (224, 224)
     ) -> torch.Tensor:
         old_px_per_m = torch.tensor(old_px_per_m, device=self.device)
         original_image_size = torch.tensor(original_image_size, device=self.device)

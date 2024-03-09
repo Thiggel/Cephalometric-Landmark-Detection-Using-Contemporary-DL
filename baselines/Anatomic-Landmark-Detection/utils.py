@@ -5,18 +5,34 @@ import math
 from PIL import Image, ImageDraw, ImageFont
 import matplotlib.pyplot as plt
 
+def _get_px_per_mm(
+    old_px_per_m: int = 7_756,
+    original_image_size: tuple[int, int] = (1360, 1840),
+    resized_image_size: tuple[int, int] = (224, 224)
+) -> torch.Tensor:
+    old_px_per_m = torch.tensor(old_px_per_m, device=self.device)
+    original_image_size = torch.tensor(original_image_size, device=self.device)
+    original_image_size_m = original_image_size / old_px_per_m
+    resized_image_size = torch.tensor(resized_image_size, device=self.device)
+    m_to_mm = 1_000
+    new_px_per_mm = (m_to_mm * original_image_size_m) / resized_image_size
+
+    return new_px_per_mm
+
 def get_statistical_results(offset, config):
 	SDR = torch.zeros(config.landmarkNum, 5)
 	SD = torch.zeros(config.landmarkNum)
 	MRE = torch.mean(offset, 0)
 
+    px_per_mm = _get_px_per_mm()
+
 	for landmarkId in range(config.landmarkNum):
 		landmarkCol = offset[:, landmarkId].clone()
-		train_mm = torch.tensor([landmarkCol[landmarkCol <= 1].size()[0], \
-								 landmarkCol[landmarkCol <= 2].size()[0], \
-								 landmarkCol[landmarkCol <= 2.5].size()[0], \
-								 landmarkCol[landmarkCol <= 3.0].size()[0], \
-								 landmarkCol[landmarkCol <= 4.0].size()[0]]).float()
+		train_mm = torch.tensor([landmarkCol[landmarkCol <= 1 * px_per_mm].size()[0], \
+								 landmarkCol[landmarkCol <= 2 * px_per_mm].size()[0], \
+								 landmarkCol[landmarkCol <= 2.5 * px_per_mm].size()[0], \
+								 landmarkCol[landmarkCol <= 3.0 * px_per_mm].size()[0], \
+								 landmarkCol[landmarkCol <= 4.0 * px_per_mm].size()[0]]).float()
 		SDR[landmarkId, :] = train_mm / landmarkCol.shape[0]
 		SD[landmarkId] = torch.sqrt(
 			torch.sum(torch.pow(landmarkCol - MRE[landmarkId], 2)) / (landmarkCol.shape[0] - 1))

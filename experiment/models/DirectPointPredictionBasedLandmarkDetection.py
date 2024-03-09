@@ -13,7 +13,7 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
         model: nn.Module,
         point_ids: list[str],
         reduce_lr_patience: int = 25,
-        optimizer: str = 'adam',
+        optimizer: str = 'sgd_momentum',
         *args,
         **kwargs
     ):
@@ -137,15 +137,6 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
 
         datamodule = self.trainer.datamodule
         train_dataloader = datamodule.train_dataloader()
-
-        # Linear warmup scheduler
-        def warmup_lr_lambda(current_step):
-            if current_step <= self.warmup_epochs * len(train_dataloader):
-                return current_step / (self.warmup_epochs * len(train_dataloader))
-            else:
-                return 1.0
-
-        warmup_scheduler = LambdaLR(optimizer, lr_lambda=warmup_lr_lambda)
 
         return {
             'optimizer': optimizer,
