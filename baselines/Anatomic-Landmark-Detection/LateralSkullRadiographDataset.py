@@ -7,8 +7,7 @@ from torchvision.transforms.functional import crop
 from PIL import Image
 import ast
 from tqdm import tqdm
-from albumentations.augmentations.transforms import \
-        GaussNoise
+from albumentations.augmentations.transforms import GaussNoise
 
 
 class LateralSkullRadiographDataset(Dataset):
@@ -19,14 +18,12 @@ class LateralSkullRadiographDataset(Dataset):
         crop: bool = False,
         resized_image_size: tuple[int, int] = (224, 224),
         resized_point_reference_frame_size: tuple[int, int] = (224, 224),
-        transform: transforms.Compose = transforms.Compose([
-            transforms.ColorJitter(
-                brightness=0.5,
-                contrast=0.5,
-                saturation=0.5
-            ),
-            GaussNoise(var_limit=0.2, mean=0, p=0.5),
-        ]),
+        transform: transforms.Compose = transforms.Compose(
+            [
+                transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5),
+                GaussNoise(var_limit=0.2, mean=0, p=0.5),
+            ]
+        ),
         flip_augmentations: bool = True,
         original_image_size: tuple[int, int] = (1840, 1360),
         patch_size: tuple[int, int] = (96, 96),
@@ -34,28 +31,31 @@ class LateralSkullRadiographDataset(Dataset):
         self.data_frame = pd.read_csv(
             os.path.join(root_dir, csv_file),
         )
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.root_dir = root_dir
         self.crop = crop
         self.resize = transforms.Resize(resized_image_size)
         self.to_tensor = transforms.ToTensor()
         self.resized_image_size = resized_image_size
-        self.resized_point_reference_frame_size = resized_point_reference_frame_size\
-            if resized_point_reference_frame_size is not None else resized_image_size
+        self.resized_point_reference_frame_size = (
+            resized_point_reference_frame_size
+            if resized_point_reference_frame_size is not None
+            else resized_image_size
+        )
         self.transform = transform
         self.flip_augmentations = flip_augmentations
 
         self.original_image_size = original_image_size
         self.patch_size = patch_size
 
-        print('Loading dataset into memory...')
+        print("Loading dataset into memory...")
         (
             self.images,
             self.points,
             self.point_ids,
         ) = self._load_data()
 
-        print('Done!')
+        print("Done!")
 
     def _parse_dimensions(self, x: str) -> tuple[int, int]:
         try:
@@ -77,11 +77,10 @@ class LateralSkullRadiographDataset(Dataset):
 
     def _load_image(self, index: int, resize=True) -> torch.Tensor:
         img_name = os.path.join(
-            self.root_dir,
-            f"images/{self.data_frame.iloc[index]['document']}.png"
+            self.root_dir, f"images/{self.data_frame.iloc[index]['document']}.png"
         )
 
-        image = Image.open(img_name).convert('L')
+        image = Image.open(img_name).convert("L")
 
         image = self.to_tensor(image)
 
@@ -95,11 +94,13 @@ class LateralSkullRadiographDataset(Dataset):
 
     @property
     def _saved_images_path(self) -> str:
-        return os.path.join(self.root_dir, f'images_{self.resized_image_size}.pt')
+        return os.path.join(self.root_dir, f"images_{self.resized_image_size}.pt")
 
     @property
     def _saved_points_path(self) -> str:
-        return os.path.join(self.root_dir, f'points_{self.resized_point_reference_frame_size}.pt')
+        return os.path.join(
+            self.root_dir, f"points_{self.resized_point_reference_frame_size}.pt"
+        )
 
     def _load_dataset(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         images = []
@@ -131,8 +132,9 @@ class LateralSkullRadiographDataset(Dataset):
     def _load_data(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         point_ids = self._load_point_ids()
 
-        if os.path.exists(self._saved_images_path) \
-                and os.path.exists(self._saved_points_path):
+        if os.path.exists(self._saved_images_path) and os.path.exists(
+            self._saved_points_path
+        ):
 
             images = torch.load(self._saved_images_path)
             points = torch.load(self._saved_points_path)
@@ -148,7 +150,7 @@ class LateralSkullRadiographDataset(Dataset):
         return images, points, point_ids
 
     def _load_point_ids(self) -> list[str]:
-        points_str = self.data_frame.iloc[0]['points']
+        points_str = self.data_frame.iloc[0]["points"]
         points_dict = ast.literal_eval(points_str)
 
         ids = [key for key in points_dict]
@@ -156,22 +158,28 @@ class LateralSkullRadiographDataset(Dataset):
         return ids
 
     def _resize_point(self, point: dict[str, float]) -> dict[str, float]:
-        x_ratio = self.resized_point_reference_frame_size[1] / self.original_image_size[1]
-        y_ratio = self.resized_point_reference_frame_size[0] / self.original_image_size[0]
+        x_ratio = (
+            self.resized_point_reference_frame_size[1] / self.original_image_size[1]
+        )
+        y_ratio = (
+            self.resized_point_reference_frame_size[0] / self.original_image_size[0]
+        )
 
         return [
-            point['x'] * x_ratio,
-            point['y'] * y_ratio,
+            point["x"] * x_ratio,
+            point["y"] * y_ratio,
         ]
 
     def _load_points(self, index: int, resize=True) -> list[torch.Tensor]:
-        points_str = self.data_frame.iloc[index]['points']
+        points_str = self.data_frame.iloc[index]["points"]
         points_dict = ast.literal_eval(points_str)
 
         points = [
-            self._resize_point(points_dict[key])
-            if resize
-            else [points_dict[key]['x'], points_dict[key]['y']]
+            (
+                self._resize_point(points_dict[key])
+                if resize
+                else [points_dict[key]["x"], points_dict[key]["y"]]
+            )
             for key in points_dict
         ]
 
@@ -189,15 +197,9 @@ class LateralSkullRadiographDataset(Dataset):
         return len(self.data_frame)
 
     def _handle_invalid_points(
-        self,
-        original_points: torch.Tensor,
-        flipped_points: torch.Tensor
+        self, original_points: torch.Tensor, flipped_points: torch.Tensor
     ) -> torch.Tensor:
-        invalid_points = (
-            original_points[:, 0] <= 0
-        ) | (
-            original_points[:, 1] <= 0
-        )
+        invalid_points = (original_points[:, 0] <= 0) | (original_points[:, 1] <= 0)
 
         flipped_points[invalid_points, :] = -1
 
@@ -213,12 +215,11 @@ class LateralSkullRadiographDataset(Dataset):
 
         flipped_points = points.clone()
 
-        flipped_points[..., 0] = self.resized_point_reference_frame_size[1] - flipped_points[..., 0]
-
-        flipped_points = self._handle_invalid_points(
-            points,
-            flipped_points
+        flipped_points[..., 0] = (
+            self.resized_point_reference_frame_size[1] - flipped_points[..., 0]
         )
+
+        flipped_points = self._handle_invalid_points(points, flipped_points)
 
         return image, flipped_points
 
@@ -231,12 +232,11 @@ class LateralSkullRadiographDataset(Dataset):
 
         flipped_points = points.clone()
 
-        flipped_points[..., 1] = self.resized_point_reference_frame_size[0] - flipped_points[..., 1]
-
-        flipped_points = self._handle_invalid_points(
-            points,
-            flipped_points
+        flipped_points[..., 1] = (
+            self.resized_point_reference_frame_size[0] - flipped_points[..., 1]
         )
+
+        flipped_points = self._handle_invalid_points(points, flipped_points)
 
         return image, flipped_points
 
@@ -281,4 +281,4 @@ class LateralSkullRadiographDataset(Dataset):
         height, width = image.shape[-2:]
         points = points / torch.Tensor([width - 1, height - 1])
 
-        return {'image': image.to(self.device), 'landmarks': points.to(self.device)}
+        return {"image": image.to(self.device), "landmarks": points.to(self.device)}

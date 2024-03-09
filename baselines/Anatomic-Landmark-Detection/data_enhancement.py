@@ -21,6 +21,7 @@ import logging
 logger = logging.getLogger(__name__)
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
+
 class DataAugmentation:
     """
     包含数据增强的八种方式
@@ -56,8 +57,11 @@ class DataAugmentation:
         image_height = image.size[1]
         crop_win_size = np.random.randint(40, 68)
         random_region = (
-            (image_width - crop_win_size) >> 1, (image_height - crop_win_size) >> 1, (image_width + crop_win_size) >> 1,
-            (image_height + crop_win_size) >> 1)
+            (image_width - crop_win_size) >> 1,
+            (image_height - crop_win_size) >> 1,
+            (image_width + crop_win_size) >> 1,
+            (image_height + crop_win_size) >> 1,
+        )
         return image.crop(random_region)
 
     @staticmethod
@@ -67,14 +71,22 @@ class DataAugmentation:
         :param image: PIL的图像image
         :return: 有颜色色差的图像image
         """
-        random_factor = np.random.randint(0, 31) / 10.  # 随机因子
-        color_image = ImageEnhance.Color(image).enhance(random_factor)  # 调整图像的饱和度
-        random_factor = np.random.randint(10, 21) / 10.  # 随机因子
-        brightness_image = ImageEnhance.Brightness(color_image).enhance(random_factor)  # 调整图像的亮度
-        random_factor = np.random.randint(10, 21) / 10.  # 随机因1子
-        contrast_image = ImageEnhance.Contrast(brightness_image).enhance(random_factor)  # 调整图像对比度
-        random_factor = np.random.randint(0, 31) / 10.  # 随机因子
-        return ImageEnhance.Sharpness(contrast_image).enhance(random_factor)  # 调整图像锐度
+        random_factor = np.random.randint(0, 31) / 10.0  # 随机因子
+        color_image = ImageEnhance.Color(image).enhance(
+            random_factor
+        )  # 调整图像的饱和度
+        random_factor = np.random.randint(10, 21) / 10.0  # 随机因子
+        brightness_image = ImageEnhance.Brightness(color_image).enhance(
+            random_factor
+        )  # 调整图像的亮度
+        random_factor = np.random.randint(10, 21) / 10.0  # 随机因1子
+        contrast_image = ImageEnhance.Contrast(brightness_image).enhance(
+            random_factor
+        )  # 调整图像对比度
+        random_factor = np.random.randint(0, 31) / 10.0  # 随机因子
+        return ImageEnhance.Sharpness(contrast_image).enhance(
+            random_factor
+        )  # 调整图像锐度
 
     @staticmethod
     def randomGaussian(image, mean=0.2, sigma=0.3):
@@ -128,18 +140,21 @@ def makeDir(path):
 
 
 def imageOps(func_name, image, des_path, file_name, times=5):
-    funcMap = {"randomRotation": DataAugmentation.randomRotation,
-               "randomCrop": DataAugmentation.randomCrop,
-               "randomColor": DataAugmentation.randomColor,
-               "randomGaussian": DataAugmentation.randomGaussian
-               }
+    funcMap = {
+        "randomRotation": DataAugmentation.randomRotation,
+        "randomCrop": DataAugmentation.randomCrop,
+        "randomColor": DataAugmentation.randomColor,
+        "randomGaussian": DataAugmentation.randomGaussian,
+    }
     if funcMap.get(func_name) is None:
         logger.error("%s is not exist", func_name)
         return -1
 
     for _i in range(0, times, 1):
         new_image = funcMap[func_name](image)
-        DataAugmentation.saveImage(new_image, os.path.join(des_path, func_name + str(_i) + file_name))
+        DataAugmentation.saveImage(
+            new_image, os.path.join(des_path, func_name + str(_i) + file_name)
+        )
 
 
 opsList = {"randomRotation", "randomCrop", "randomColor", "randomGaussian"}
@@ -163,18 +178,24 @@ def threadOPS(path, new_path):
             if makeDir(os.path.join(new_path, img_name)) != -1:
                 threadOPS(tmp_img_name, os.path.join(new_path, img_name))
             else:
-                print('create new dir failure')
+                print("create new dir failure")
                 return -1
                 # os.removedirs(tmp_img_name)
-        elif tmp_img_name.split('.')[1] != "DS_Store":
+        elif tmp_img_name.split(".")[1] != "DS_Store":
             # 读取文件并进行操作
             image = DataAugmentation.openImage(tmp_img_name)
             threadImage = [0] * 5
             _index = 0
             for ops_name in opsList:
-                threadImage[_index] = threading.Thread(target=imageOps,
-                                                       args=(ops_name, image, new_path, img_name,))
+                threadImage[_index] = threading.Thread(
+                    target=imageOps,
+                    args=(
+                        ops_name,
+                        image,
+                        new_path,
+                        img_name,
+                    ),
+                )
                 threadImage[_index].start()
                 _index += 1
                 time.sleep(0.2)
-

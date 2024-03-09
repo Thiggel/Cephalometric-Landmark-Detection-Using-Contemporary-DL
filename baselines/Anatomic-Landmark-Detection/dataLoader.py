@@ -6,6 +6,7 @@ import os
 from skimage import io, transform
 import pandas as pd
 
+
 class Rescale(object):
     """Rescale the image in a sample to a given size.
 
@@ -21,7 +22,7 @@ class Rescale(object):
 
     def __call__(self, sample):
         # image, landmarks, targetMaps = sample['image'], sample['landmarks'], sample['targetMaps']
-        image, landmarks = sample['image'], sample['landmarks']
+        image, landmarks = sample["image"], sample["landmarks"]
         h, w = image.shape[:2]
         # print (h, w)
         if isinstance(self.output_size, int):
@@ -33,10 +34,11 @@ class Rescale(object):
             new_h, new_w = self.output_size
 
         new_h, new_w = int(new_h), int(new_w)
-        img = transform.resize(image, (new_h, new_w), mode='constant')
+        img = transform.resize(image, (new_h, new_w), mode="constant")
         landmarks = landmarks * [1 / (w - 1), 1 / (h - 1)]
 
-        return {'image': img, 'landmarks': landmarks}
+        return {"image": img, "landmarks": landmarks}
+
 
 class RandomCrop(object):
     """Crop randomly the image in a sample.
@@ -55,7 +57,7 @@ class RandomCrop(object):
             self.output_size = output_size
 
     def __call__(self, sample):
-        image, landmarks = sample['image'], sample['landmarks']
+        image, landmarks = sample["image"], sample["landmarks"]
 
         h, w = image.shape[:2]
         new_h, new_w = self.output_size
@@ -63,11 +65,10 @@ class RandomCrop(object):
         top = np.random.randint(0, h - new_h)
         left = np.random.randint(0, w - new_w)
 
-        image = image[top: top + new_h,
-                left: left + new_w]
+        image = image[top : top + new_h, left : left + new_w]
         landmarks = landmarks - [left, top]
 
-        return {'image': image, 'landmarks': landmarks}
+        return {"image": image, "landmarks": landmarks}
 
 
 class ToTensor(object):
@@ -75,15 +76,17 @@ class ToTensor(object):
 
     def __call__(self, sample):
         # image, tlandmarks, targetMaps = sample['image'], sample['landmarks'], sample['targetMaps']
-        image, tlandmarks = sample['image'], sample['landmarks']
+        image, tlandmarks = sample["image"], sample["landmarks"]
         # swap color axis because
         # numpy image: H x W x C
         # torch image: C X H X W
         image = image.transpose((2, 0, 1))
         landmarks = np.zeros(tlandmarks.shape)
         landmarks[:, 0], landmarks[:, 1] = tlandmarks[:, 1], tlandmarks[:, 0]
-        return {'image': torch.from_numpy(image).float(),
-                'landmarks': torch.from_numpy(landmarks).float()}
+        return {
+            "image": torch.from_numpy(image).float(),
+            "landmarks": torch.from_numpy(landmarks).float(),
+        }
         # 'targetMaps': [torch.from_numpy(targetMap).float() for targetMap in targetMaps]}
 
 
@@ -109,10 +112,12 @@ class LandmarksDataset(Dataset):
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.landmarks_frame.iloc[idx, 0])
         image = io.imread(img_name)
-        landmarks = self.landmarks_frame.iloc[idx, 1:self.landmarkNum * 2 + 1].values.astype('float')
+        landmarks = self.landmarks_frame.iloc[
+            idx, 1 : self.landmarkNum * 2 + 1
+        ].values.astype("float")
         landmarks = landmarks.reshape(-1, 2)
 
-        sample = {'image': image, 'landmarks': landmarks}
+        sample = {"image": image, "landmarks": landmarks}
         if self.transform:
             sample = self.transform(sample)
 
