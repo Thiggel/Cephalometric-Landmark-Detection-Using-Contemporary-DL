@@ -141,6 +141,9 @@ class HeatmapOffsetmapLoss(nn.Module):
         return self.offsetMask
 
     def forward(self, featureMaps, landmarks):
+        # TODO: paste back old logic and make everything 100% equal to the old implementation
+
+        landmarks = landmarks.to(self.device)
         heatmaps, _ = self.heatmap_helper.create_heatmaps(
             landmarks * torch.tensor([self.width, self.height], device=self.device).unsqueeze(0).unsqueeze(0), 40
         )
@@ -148,7 +151,10 @@ class HeatmapOffsetmapLoss(nn.Module):
         offsetmaps = self.offsetmap_helper.create_offset_maps(
             landmarks * torch.tensor([self.width, self.height], device=self.device).unsqueeze(0).unsqueeze(0)
         )
-        binary_losses = self.binaryLoss(featureMaps, heatmaps)
+        binary_losses = self.binaryLoss(
+            featureMaps[:, :self.landmarkNum, :, :],
+            heatmaps
+        )
 
         offset_x_losses = self.l1Loss(
             featureMaps[:, self.landmarkNum:self.landmarkNum * 2, :, :],

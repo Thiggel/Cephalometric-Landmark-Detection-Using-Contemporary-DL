@@ -33,17 +33,9 @@ class HeatmapHelper:
         y_grid = y_grid.unsqueeze(0).unsqueeze(0)
         x_grid = x_grid.unsqueeze(0).unsqueeze(0)
 
-        print("y_grid", y_grid.shape)
-        print("x_grid", x_grid.shape)
-
         x, y = points.split(1, dim=-1)
         x = x.unsqueeze(-2)
         y = y.unsqueeze(-1)
-
-        print(points[0, 0, :])
-
-        print("x", x.shape)
-        print("y", y.shape)
 
         heatmaps = torch.exp(
             -0.5 * ((y_grid - y) ** 2 + (x_grid - x) ** 2) / (gaussian_sd ** 2)
