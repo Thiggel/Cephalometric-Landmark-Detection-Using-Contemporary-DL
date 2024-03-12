@@ -1,8 +1,6 @@
 from __future__ import print_function, division
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
-import utils
 
 
 class HeatmapOffsetmapLoss(nn.Module):

@@ -7,7 +7,7 @@ class MaskedWingLoss(nn.Module):
         self,
         w: float = 10,
         epsilon: float = 2,
-        old_px_per_m: int = 7_756,
+        px_to_mm: int = 0.1,
         original_image_size: tuple[int, int] = (1360, 1840),
         resized_image_size: tuple[int, int] = (224, 224),
     ):
@@ -18,25 +18,27 @@ class MaskedWingLoss(nn.Module):
         self.epsilon = epsilon
         self.C = w - w * torch.tensor(1 + w / epsilon, device=self.device).log()
 
-        self.px_per_m = self._get_px_per_m(
-            old_px_per_m=old_px_per_m,
+        self.px_to_m = self._get_px_to_mm(
+            px_to_mm=px_to_mm,
             original_image_size=original_image_size,
             resized_image_size=resized_image_size,
         )
 
-    def _get_px_per_m(
+    def _get_px_to_mm(
         self,
-        old_px_per_m: int = 7_756,
-        original_image_size: tuple[int, int] = (1360, 1840),
-        resized_image_size: tuple[int, int] = (224, 224)
+        px_to_mm: int,
+        original_image_size: tuple[int, int],
+        resized_image_size: tuple[int, int],
     ) -> torch.Tensor:
-        old_px_per_m = torch.tensor(old_px_per_m, device=self.device)
+        px_to_mm = torch.tensor(px_to_mm, device=self.device)
         original_image_size = torch.tensor(original_image_size, device=self.device)
-        original_image_size_m = original_image_size / old_px_per_m
         resized_image_size = torch.tensor(resized_image_size, device=self.device)
-        new_px_per_m = original_image_size_m / resized_image_size
 
-        return new_px_per_m
+        size_ratio = original_image_size_m / resized_image_size
+
+        new_px_to_mm = px_to_mm * ratio
+
+        return new_px_to_mm
 
     def difference_to_magnitude(
         self,
@@ -65,9 +67,8 @@ class MaskedWingLoss(nn.Module):
         targets: torch.Tensor,
         mask: torch.Tensor
     ) -> torch.Tensor:
-        m_to_mm = 1000
         difference = predictions - targets
-        difference_mm = difference * self.px_per_m * m_to_mm
+        difference_mm = difference * self.px_to_mm
         magnitude = self.difference_to_magnitude(difference_mm)
 
         masked_mm_error = magnitude * mask
@@ -98,9 +99,8 @@ class MaskedWingLoss(nn.Module):
         targets: torch.Tensor,
         n_mm: int
     ) -> torch.Tensor:
-        m_to_mm = 1000
         difference = predictions - targets
-        difference_mm = difference * self.px_per_m * m_to_mm
+        difference_mm = difference * self.px_to_mm
         magnitude = self.difference_to_magnitude(difference_mm)
 
         mask = (targets > 0).prod(-1)
