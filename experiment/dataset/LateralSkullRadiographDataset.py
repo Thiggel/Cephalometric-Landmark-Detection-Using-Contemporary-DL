@@ -1,4 +1,5 @@
 import os
+import yaml
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
@@ -27,6 +28,7 @@ class LateralSkullRadiographDataset(Dataset):
         flip_augmentations: bool = True,
     ):
         self.root_dir = root_dir
+        self._get_metadata()
         self.data_frame = pd.read_csv(
             os.path.join(root_dir, csv_file),
         )
@@ -52,6 +54,23 @@ class LateralSkullRadiographDataset(Dataset):
     def num_points(self) -> int:
         return len(self.point_ids)
 
+    def _get_metadata(self) -> dict:
+        metadata_file = os.path.join(
+            self.root_dir,
+            'metadata.yaml'
+        )
+
+        if os.path.exists(metadata_file):
+            with open(metadata_file, 'r') as file:
+                metadata = yaml.safe_load(file)
+
+                self.original_image_size = (
+                    metadata['image_height'],
+                    metadata['image_width'],
+                )
+
+                self.px_too_mm = metadata['px_to_mm']
+
     def _parse_dimensions(self, x: str) -> tuple[int, int]:
         try:
             return eval(x)
@@ -64,7 +83,7 @@ class LateralSkullRadiographDataset(Dataset):
             f"images/{self.data_frame.iloc[index]['document']}"
         )
 
-        image = Image.open(img_name).convert('RGB')
+        image = Image.open(img_name).convert('L')
 
         image = self.to_tensor(image)
 
@@ -114,13 +133,12 @@ class LateralSkullRadiographDataset(Dataset):
             images = torch.load(self._saved_images_path)
             points = torch.load(self._saved_points_path)
 
-            return images, points, point_ids
+        else:
+            images, points = self._load_dataset()
 
-        images, points = self._load_dataset()
+            self._save_to_pickle(images, points)
 
         images = self._normalize(images)
-
-        self._save_to_pickle(images, points)
 
         return images, points, point_ids
 

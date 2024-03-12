@@ -30,7 +30,7 @@ class ViT(nn.Module):
     def __init__(
         self,
         model_name: str,
-        output_size: int = 44,
+        output_size: int,
         downscale: bool = False,
         complex_mlp_head: bool = False,
         *args,

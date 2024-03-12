@@ -12,21 +12,18 @@ import torch.multiprocessing as mp
 
 from utils.set_seed import set_seed
 from loggers.ImagePredictionLogger import ImagePredictionLogger
-from loggers.HeatmapPredictionLogger import HeatmapPredictionLogger
 from dataset.LateralSkullRadiographDataModule import \
     LateralSkullRadiographDataModule
 from models.ModelTypes import ModelTypes
-from models.HeatmapBasedLandmarkDetection import \
-    HeatmapBasedLandmarkDetection
 
 mp.set_start_method('spawn')
 
 
 def get_args() -> dict:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--root_dir', type=str, default='dataset')
+    parser.add_argument('--root_dir', type=str, default='dataset/novel')
     parser.add_argument(
-        '--csv_file', type=str, default='all_images_same_points_dimensions.csv'
+        '--csv_file', type=str, default='all_images_37_points.csv'
     )
     parser.add_argument(
         '--model_name',
@@ -63,15 +60,13 @@ def run(args: dict, seed: int = 42) -> dict:
         splits=args.splits,
         batch_size=args.batch_size,
         resized_image_size=model_type.resized_image_size,
-        resized_point_reference_frame_size=model_type.resized_point_reference_frame_size,
     )
 
     model_args = {
         'model_name': args.model_name,
         'point_ids': datamodule.dataset.point_ids,
+        'output_size': datamodule.dataset.num_points,
         'resized_image_size': model_type.resized_image_size,
-        'resized_point_reference_frame_size':
-            model_type.resized_point_reference_frame_size,
     }
 
     model = model_type.initialize(**model_args)
@@ -96,12 +91,7 @@ def run(args: dict, seed: int = 42) -> dict:
     image_logger = ImagePredictionLogger(
         num_samples=5,
         resized_image_size=model_type.resized_image_size,
-        resized_point_reference_frame_size=model_type.resized_point_reference_frame_size,
         model_name=args.model_name,
-    )
-    heatmap_logger = HeatmapPredictionLogger(
-        num_samples=5,
-        module_name=args.model_name,
     )
 
     stats_monitor = DeviceStatsMonitor()
@@ -112,9 +102,6 @@ def run(args: dict, seed: int = 42) -> dict:
         image_logger,
         stats_monitor
     ]
-
-    if isinstance(model, HeatmapBasedLandmarkDetection):
-        callbacks.append(heatmap_logger)
 
     trainer_args = {
         'max_time': {'hours': args.max_hours_per_run},

@@ -4,7 +4,6 @@ from lightning import Callback, Trainer, LightningModule
 import os
 
 from utils.clamp_points import clamp_points
-from utils.resize_points import resize_points
 
 
 class ImagePredictionLogger(Callback):
@@ -12,13 +11,11 @@ class ImagePredictionLogger(Callback):
         self,
         num_samples: int,
         resized_image_size: tuple[int, int],
-        resized_point_reference_frame_size: tuple[int, int],
         model_name: str
     ):
         super().__init__()
         self.num_samples = num_samples
         self.resized_image_size = resized_image_size
-        self.resized_point_reference_frame_size = resized_point_reference_frame_size
         self.module_name = model_name
 
     def on_validation_epoch_start(
@@ -29,19 +26,7 @@ class ImagePredictionLogger(Callback):
         images, targets = next(iter(trainer.datamodule.val_dataloader()))
         images = images[:self.num_samples]
 
-        targets = resize_points(
-            targets[:self.num_samples],
-            self.resized_image_size,
-            self.resized_point_reference_frame_size
-        )
-
         preds = pl_module(images)
-
-        preds = resize_points(
-            preds,
-            self.resized_image_size,
-            self.resized_point_reference_frame_size
-        )
 
         preds = clamp_points(preds, images).cpu().numpy()
         targets = clamp_points(targets, images).cpu().numpy()

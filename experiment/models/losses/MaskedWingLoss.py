@@ -18,7 +18,7 @@ class MaskedWingLoss(nn.Module):
         self.epsilon = epsilon
         self.C = w - w * torch.tensor(1 + w / epsilon, device=self.device).log()
 
-        self.px_to_m = self._get_px_to_mm(
+        self.px_to_mm = self._get_px_to_mm(
             px_to_mm=px_to_mm,
             original_image_size=original_image_size,
             resized_image_size=resized_image_size,
@@ -34,9 +34,9 @@ class MaskedWingLoss(nn.Module):
         original_image_size = torch.tensor(original_image_size, device=self.device)
         resized_image_size = torch.tensor(resized_image_size, device=self.device)
 
-        size_ratio = original_image_size_m / resized_image_size
+        size_ratio = original_image_size / resized_image_size
 
-        new_px_to_mm = px_to_mm * ratio
+        new_px_to_mm = px_to_mm * size_ratio
 
         return new_px_to_mm
 
