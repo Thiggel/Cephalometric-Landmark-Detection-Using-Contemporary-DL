@@ -29,19 +29,11 @@ class HeatmapOffsetmapLoss(nn.Module):
         self.binaryLoss = nn.BCEWithLogitsLoss(None, True)
         self.l1Loss = nn.L1Loss()
 
-        self.general_offsetmap_x = self.get_general_offsetmap_x()
-
-        self.general_offsetmap_y = self.get_general_offsetmap_y()
-
+        self.general_offsetmap = self.get_general_offsetmap()
         self.general_heatmap = self.get_general_heatmap()
 
-        self.offsetmap_x = torch.zeros(
-            (self.imageNum, self.landmarkNum, self.height, self.width),
-            device=self.device
-        )
-
-        self.offsetmap_y = torch.zeros(
-            (self.imageNum, self.landmarkNum, self.height, self.width),
+        self.offsetmap = torch.zeros(
+            (2, self.imageNum, self.landmarkNum, self.height, self.width),
             device=self.device
         )
 
@@ -50,35 +42,20 @@ class HeatmapOffsetmapLoss(nn.Module):
             device=self.device
         )
 
-    def get_general_offsetmap_x(self):
-        general_offsetmap_x = torch.ones(
-            (self.height * 2, self.width * 2),
+    def get_general_offsetmap(self):
+        general_offsetmap = torch.ones(
+            (2, self.height * 2, self.width * 2),
             device=self.device
         )
 
-        for i in range(2 * self.height):
-            general_offsetmap_x[i, :] *= i
+        general_offsetmap[0] *= torch.arange(2 * self.width)
+        general_offsetmap[1] *= torch.arange(2 * self.height).unsqueeze(-1)
 
-        general_offsetmap_x = self.height - general_offsetmap_x
+        general_offsetmap = torch.flip(general_offsetmap, dims=[1, 2])
 
-        general_offsetmap_x /= self.offsetmap_radius
+        general_offsetmap /= self.offsetmap_radius
 
-        return general_offsetmap_x
-
-    def get_general_offsetmap_y(self):
-        general_offsetmap_y = torch.ones(
-            (self.height * 2, self.width * 2),
-            device=self.device
-        )
-
-        for i in range(2 * self.width):
-            general_offsetmap_y[:, i] *= i
-
-        general_offsetmap_y = self.width - general_offsetmap_y
-
-        general_offsetmap_y /= self.offsetmap_radius
-
-        return general_offsetmap_y
+        return general_offsetmap
 
     def get_general_heatmap(self):
         general_heatmap = torch.zeros(
@@ -88,47 +65,27 @@ class HeatmapOffsetmapLoss(nn.Module):
 
         radius = self.heatmap_radius
 
-        x_indices = torch.arange(
-            self.height - radius,
-            self.height + radius,
-            device=self.device
-        )
-
-        y_indices = torch.arange(
-            self.width - radius,
-            self.width + radius,
-            device=self.device
+        y_grid, x_grid = torch.meshgrid(
+            torch.arange(0, self.height * 2, device=self.device),
+            torch.arange(0, self.width * 2, device=self.device)
         )
 
         distance = (
-            (x_indices - self.height) ** 2 +
-            (y_indices - self.width) ** 2
+            (y_grid - self.height) ** 2 +
+            (x_grid - self.width) ** 2
         ).sqrt()
 
         mask = distance <= radius
 
-        #general_heatmap[
-        #    x_indices[mask],
-        #    y_indices[mask]
-        #] = 1
-
-        rr = radius
-
-        for i in range(self.height - rr, self.height + rr + 2):
-            for j in range(self.width - rr, self.width + rr + 2):
-                temdis = utils.Mydist((self.height, self.width), (i, j))
-                if temdis <= rr:
-                    general_heatmap[i][j] = 1
+        general_heatmap[mask] = 1
 
         return general_heatmap
-
 
     def forward(self, featureMaps, landmarks):
         h, w = featureMaps.size()[2:]
         landmarks = (
             landmarks.to(self.device) * torch.tensor([h, w], device=self.device)
         ).long()
-
 
         for imageId in range(self.imageNum):
             for landmarkId in range(self.landmarkNum):
@@ -140,16 +97,17 @@ class HeatmapOffsetmapLoss(nn.Module):
                     w - y: 2 * w - y,
                 ]
 
-                self.offsetmap_x[imageId, landmarkId, :, :] = self.general_offsetmap_x[
+                self.offsetmap[1, imageId, landmarkId, :, :] = self.general_offsetmap[
+                    1,
                     h - x : 2 * h - x,
                     w - y : 2 * w - y,
                 ]
 
-                self.offsetmap_y[imageId, landmarkId, :, :] = self.general_offsetmap_y[
+                self.offsetmap[0, imageId, landmarkId, :, :] = self.general_offsetmap[
+                    0,
                     h - x : 2 * h - x,
                     w - y : 2 * w - y,
                 ]
-
 
         indexs = self.heatmap > 0
         temloss = [
@@ -164,7 +122,7 @@ class HeatmapOffsetmapLoss(nn.Module):
                         featureMaps[imageId][landmarkId + self.landmarkNum * 1][
                             indexs[imageId][landmarkId]
                         ],
-                        self.offsetmap_x[imageId][landmarkId][
+                        self.offsetmap[1, imageId, landmarkId][
                             indexs[imageId][landmarkId]
                         ],
                     ),
@@ -172,7 +130,7 @@ class HeatmapOffsetmapLoss(nn.Module):
                         featureMaps[imageId][landmarkId + self.landmarkNum * 2][
                             indexs[imageId][landmarkId]
                         ],
-                        self.offsetmap_y[imageId][landmarkId][
+                        self.offsetmap[0, imageId, landmarkId][
                             indexs[imageId][landmarkId]
                         ],
                     ),
