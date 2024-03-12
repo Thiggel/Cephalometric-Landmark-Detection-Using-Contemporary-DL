@@ -135,37 +135,76 @@ class HeatmapOffsetmapLoss(nn.Module):
         for imageId in range(self.imageNum):
             for landmarkId in range(self.landmarkNum):
                 self.offsetMask[imageId, landmarkId, :, :] = self.mask[
-                    h - X[imageId][landmarkId] : 2 * h - X[imageId][landmarkId],
-                    w - Y[imageId][landmarkId] : 2 * w - Y[imageId][landmarkId],
+                    h - Y[imageId][landmarkId] : 2 * h - Y[imageId][landmarkId],
+                    w - X[imageId][landmarkId] : 2 * w - X[imageId][landmarkId],
                 ]
         return self.offsetMask
 
     def forward(self, featureMaps, landmarks):
+        h, w = featureMaps.size()[2], featureMaps.size()[3]
+        X = np.round((landmarks[:, :, 0] * (w - 1)).numpy()).astype("int")
+        Y = np.round((landmarks[:, :, 1] * (h - 1)).numpy()).astype("int")
+        binary_class_groundTruth = self.binary_class_groundTruth1
+
+        for imageId in range(self.imageNum):
+            for landmarkId in range(self.landmarkNum):
+
+                binary_class_groundTruth[imageId, landmarkId, :, :] = self.HeatMap[
+                    h - Y[imageId][landmarkId]: 2*h - Y[imageId][landmarkId],
+                    w - X[imageId][landmarkId]: 2*w - X[imageId][landmarkId]
+                ]
+
+                self.offsetMapX_groundTruth[imageId, landmarkId, :, :] = self.offsetMapx[
+                    h - Y[imageId][landmarkId]: 2*h - Y[imageId][landmarkId],
+                    w - X[imageId][landmarkId]: 2*w - X[imageId][landmarkId]
+                ]
+
+                self.offsetMapY_groundTruth[imageId, landmarkId, :, :] = self.offsetMapy[
+                    h - Y[imageId][landmarkId]: 2*h - Y[imageId][landmarkId],
+                    w - X[imageId][landmarkId]: 2*w - X[imageId][landmarkId]
+                ]
+
+        indexs = binary_class_groundTruth > 0
+
         # TODO: paste back old logic and make everything 100% equal to the old implementation
 
-        landmarks = landmarks.to(self.device)
-        heatmaps, _ = self.heatmap_helper.create_heatmaps(
-            landmarks * torch.tensor([self.width, self.height], device=self.device).unsqueeze(0).unsqueeze(0), 40
-        )
+        #landmarks = landmarks.to(self.device)
+        #heatmaps, _ = self.heatmap_helper.create_heatmaps(
+        #    landmarks * torch.tensor([self.width, self.height], device=self.device).unsqueeze(0).unsqueeze(0), 40
+        #)
+        #offsetmaps = self.offsetmap_helper.create_offset_maps(
+        #    landmarks * torch.tensor([self.width, self.height], device=self.device).unsqueeze(0).unsqueeze(0)
+        #)
 
-        offsetmaps = self.offsetmap_helper.create_offset_maps(
-            landmarks * torch.tensor([self.width, self.height], device=self.device).unsqueeze(0).unsqueeze(0)
-        )
-        binary_losses = self.binaryLoss(
-            featureMaps[:, :self.landmarkNum, :, :],
-            heatmaps
-        )
+        #binary_losses = self.binaryLoss(
+        #    featureMaps[:, :self.landmarkNum, :, :],
+        #    heatmaps
+        #)
 
-        offset_x_losses = self.l1Loss(
-            featureMaps[:, self.landmarkNum:self.landmarkNum * 2, :, :],
-            offsetmaps[:, :, 0],
-        )
+        #offset_x_losses = self.l1Loss(
+        #    featureMaps[:, self.landmarkNum:self.landmarkNum * 2, :, :],
+        #    offsetmaps[:, :, 0],
+        #)
 
-        offset_y_losses = self.l1Loss(
-            featureMaps[:, self.landmarkNum * 2:, :, :],
-            offsetmaps[:, :, 1],
-        )
+        #offset_y_losses = self.l1Loss(
+        #    featureMaps[:, self.landmarkNum * 2:, :, :],
+        #    offsetmaps[:, :, 1],
+        #)
 
-        loss = (2 * binary_losses + offset_x_losses + offset_y_losses).mean()
+        #loss = (2 * binary_losses + offset_x_losses + offset_y_losses).mean()
+
+
+        temloss = [[2*self.binaryLoss(featureMaps[imageId][landmarkId], binary_class_groundTruth[imageId][landmarkId]), \
+                    
+                    self.l1Loss(featureMaps[imageId][landmarkId + self.landmarkNum*1][indexs[imageId][landmarkId]], \
+                        self.offsetMapX_groundTruth[imageId][landmarkId][indexs[imageId][landmarkId]]) , \
+                        
+                    self.l1Loss(featureMaps[imageId][landmarkId + self.landmarkNum*2][indexs[imageId][landmarkId]], \
+                        self.offsetMapY_groundTruth[imageId][landmarkId][indexs[imageId][landmarkId]])]
+
+                    for imageId in range(self.imageNum)
+                    for landmarkId in range(self.landmarkNum)]
+        loss = (sum([sum(temloss[ind]) for ind in range(self.imageNum * self.landmarkNum)]))/(self.imageNum * self.landmarkNum)
+
 
         return loss

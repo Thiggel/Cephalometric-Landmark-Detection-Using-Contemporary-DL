@@ -11,7 +11,7 @@ class HeatmapHelper:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def create_heatmaps(
-        self, points: torch.Tensor, gaussian_sd: float = 1
+        self, points: torch.Tensor, radius: float = 1
     ) -> torch.Tensor:
         """
         Create heatmaps for target points.
@@ -37,8 +37,13 @@ class HeatmapHelper:
         x = x.unsqueeze(-2)
         y = y.unsqueeze(-1)
 
-        heatmaps = torch.exp(
-            -0.5 * ((y_grid - y) ** 2 + (x_grid - x) ** 2) / (gaussian_sd ** 2)
+        distance = ((x_grid - x) ** 2 + (y_grid - y) ** 2).sqrt()
+
+        heatmaps = torch.zeros(
+            (batch_size, num_points, *self.resized_image_size),
+            device=self.device
         )
+
+        heatmaps[distance <= radius] = 1
 
         return heatmaps, mask.unsqueeze(-1).unsqueeze(-1)

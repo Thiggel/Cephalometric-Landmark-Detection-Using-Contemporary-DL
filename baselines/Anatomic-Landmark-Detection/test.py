@@ -14,7 +14,7 @@ loss = HeatmapOffsetmapLoss(
     )
 )
 
-test_feature_maps = torch.rand(2, 3, 800, 640)
+test_feature_maps = torch.rand(2, 19 * 3, 800, 640)
 
 min_value = torch.tensor([0.1, 0.1])
 max_value = torch.tensor([0.9, 0.9])
