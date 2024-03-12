@@ -33,9 +33,9 @@ class HeatmapHelper:
         y_grid = y_grid.unsqueeze(0).unsqueeze(0)
         x_grid = x_grid.unsqueeze(0).unsqueeze(0)
 
-        x, y = points.split(1, dim=-1)
-        x = x.unsqueeze(-2)
-        y = y.unsqueeze(-1)
+        y, x = points.split(1, dim=-1)
+        y = y.unsqueeze(-2)
+        x = x.unsqueeze(-1)
 
         distance = ((x_grid - x) ** 2 + (y_grid - y) ** 2).sqrt()
 
