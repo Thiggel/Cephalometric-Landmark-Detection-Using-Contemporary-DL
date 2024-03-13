@@ -1,14 +1,12 @@
 from __future__ import print_function, division
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
-import matplotlib.pyplot as plt
-import os
 import torch.nn.functional as F
 import torchvision
 import lightning as L
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from HeatmapOffsetmapLoss import HeatmapOffsetmapLoss
+from models.baselines.HeatmapOffsetmapLoss import HeatmapOffsetmapLoss
 from models.losses.MaskedWingLoss import MaskedWingLoss
 
 
@@ -394,24 +392,27 @@ class fusionVGG19(nn.Module):
         # predicting landmarks with the integral operation
         # coordinateMean1, coordinateMean2, coordinateDev = self.getCoordinate(y)
 
-        return [y]
+        return y
 
 
-class ChenLandmarkPredction(L.LightningModule):
+class ChenLandmarkPrediction(L.LightningModule):
     def __init__(
         self,
         batch_size: int = 32,
-        num_points: int = 19,
+        output_size: int = 19,
         original_image_size: int = (1920, 1080),
         resized_image_size: int = (800, 640),
         px_to_mm: int = 0.1,
+        reduce_lr_patience: int = 25,
+        *args,
+        **kwargs,
     ):
         super().__init__()
 
         self.model = fusionVGG19(
             torchvision.models.vgg19_bn(pretrained=True),
             batch_size,
-            num_points,
+            output_size,
             resized_image_size,
         )
 
@@ -423,25 +424,20 @@ class ChenLandmarkPredction(L.LightningModule):
             resized_image_size=resized_image_size,
         )
 
+        self.reduce_lr_patience = reduce_lr_patience
+
+    def forward_with_heatmaps(self, x):
+        x = x.repeat(1, 3, 1, 1)
+        output = self.model(x)
+        return output
+
     def forward(self, x):
-        return self.model(x)
+        output = self.forward_with_heatmaps(x)
 
-    def get_highest_points(
-        self,
-        heatmaps: torch.Tensor
-    ) -> torch.Tensor:
-        batch_size, num_points, height, width = heatmaps.shape
+        return self.get_points(output)
 
-        reshaped_heatmaps = heatmaps.reshape(
-            batch_size, num_points, -1
-        )
-
-        argmax_indices_flat = torch.argmax(reshaped_heatmaps, dim=2)
-        y_offset = argmax_indices_flat // width
-        x_offset = argmax_indices_flat % width
-        argmax_indices = torch.stack([x_offset, y_offset], dim=2)
-
-        return argmax_indices
+    def get_points(self, model_output: torch.Tensor):
+        return self.model.getCoordinate(model_output)[0]
 
     def step(
         self,
@@ -450,28 +446,26 @@ class ChenLandmarkPredction(L.LightningModule):
     ):
         inputs, targets = batch
 
-        predictions = self.model(inputs)
+        predictions = self.forward_with_heatmaps(inputs)
 
-        loss, unreduced_mm_error = self.loss(
+        loss = self.loss(
             predictions,
             targets,
         )
 
-        highest_points = self.get_highest_points(
-            predictions[:, :self.num_points]
-        )
+        point_predictions = self.get_points(predictions)
 
-        mm_error = None
+        unreduced_mm_error = None
 
         if with_mm_error:
 
             unreduced_mm_error = self.mm_error.mm_error(
-                highest_points,
+                point_predictions,
                 targets,
-                targets > 0
+                (targets > 0).prod(dim=-1)
             )
 
-        return loss, unreduced_mm_error, highest_points, targets
+        return loss, unreduced_mm_error, point_predictions, targets
 
     def training_step(
         self,
@@ -545,7 +539,7 @@ class ChenLandmarkPredction(L.LightningModule):
 
     def configure_optimizers(self) -> dict:
         optimizer = torch.optim.Adadelta(
-            filter(lambda p: p.requires_grad, model_ft.parameters()), lr=1.0
+            filter(lambda p: p.requires_grad, self.model.parameters()), lr=1.0
         )
 
         return {

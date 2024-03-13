@@ -66,7 +66,9 @@ def run(args: dict, seed: int = 42) -> dict:
         'model_name': args.model_name,
         'point_ids': datamodule.dataset.point_ids,
         'output_size': datamodule.dataset.num_points,
+        'original_image_size': datamodule.dataset.original_image_size,
         'resized_image_size': model_type.resized_image_size,
+        'batch_size': args.batch_size,
     }
 
     model = model_type.initialize(**model_args)

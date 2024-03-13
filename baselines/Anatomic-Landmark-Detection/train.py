@@ -8,6 +8,8 @@ from tqdm import tqdm
 def train_model(model, dataloaders, criterion, optimizer, config):
     since = time.time()
 
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     # validation for every 5 epoches
     test_epoch = 5
     for epoch in range(config.epochs):
@@ -22,7 +24,7 @@ def train_model(model, dataloaders, criterion, optimizer, config):
                 data = dataloaders[phase][ide]
 
                 inputs, labels = data["image"], data["landmarks"]
-                inputs = inputs.to(config.use_gpu)
+                inputs = inputs.to(device)
 
                 optimizer.zero_grad()
                 # forward
@@ -38,11 +40,11 @@ def train_model(model, dataloaders, criterion, optimizer, config):
                     # landmark prediction. The results are normalized to (0, 1)
                     predicted_landmarks = utils.regression_voting(
                         heatmaps, config.R2
-                    ).cuda(config.use_gpu)
+                    ).to(device)
                     # deviation calculation for all landmarks
                     dev = utils.calculate_deviation(
                         predicted_landmarks.detach(),
-                        labels.cuda(config.use_gpu).detach(),
+                        labels.to(device).detach(),
                     )
                     train_dev.append(dev)
 
@@ -89,6 +91,7 @@ best_SD = 0
 def val(model, dataloaders, criterion, optimizer, config):
     since = time.time()
     test_dev = []
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     for phase in ["val"]:
         model.train(False)  # Set model to evaluate mode
@@ -100,17 +103,17 @@ def val(model, dataloaders, criterion, optimizer, config):
             data = dataloaders[phase][ide]
 
             inputs, labels = data["image"], data["landmarks"]
-            inputs = inputs.to(config.use_gpu)
+            inputs = inputs.to(device)
             # forward
             heatmaps = model(inputs)
 
             # landmark prediction. The results are normalized to (0, 1)
             predicted_landmarks = utils.regression_voting(heatmaps, config.R2).to(
-                config.use_gpu
+                device
             )
             # deviation calculation for all predictions
             dev = utils.calculate_deviation(
-                predicted_landmarks.detach(), labels.to(config.use_gpu).detach()
+                predicted_landmarks.detach(), labels.to(device).detach()
             )
 
             test_dev.append(dev)

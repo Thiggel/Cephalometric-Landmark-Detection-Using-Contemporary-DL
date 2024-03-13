@@ -283,12 +283,14 @@ class fusionVGG19(nn.Module):
 
         self.higth, self.width = config.image_scale
 
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         self.coordinateX = torch.ones(
             self.batchSize, self.landmarksNum, self.higth, self.width
-        ).cuda(config.use_gpu)
+        ).to(self.device)
         self.coordinateY = torch.ones(
             self.batchSize, self.landmarksNum, self.higth, self.width
-        ).cuda(config.use_gpu)
+        ).to(self.device)
 
         for i in range(self.higth):
             self.coordinateX[:, :, i, :] = self.coordinateX[:, :, i, :] * i

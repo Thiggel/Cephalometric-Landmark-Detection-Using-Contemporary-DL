@@ -4,6 +4,7 @@ import torch.nn as nn
 
 from models.DirectPointPredictionBasedLandmarkDetection import \
     DirectPointPredictionBasedLandmarkDetection
+from models.baselines.chen import ChenLandmarkPrediction
 from models.ViT import ViT
 from models.ConvNextV2 import ConvNextV2
 
@@ -21,6 +22,12 @@ class ModelTypes(Enum):
     @staticmethod
     def model_types():
         return {
+            'Chen': ModelType(
+                resized_image_size=(800, 640),
+                model=lambda *args, **kwargs: ChenLandmarkPrediction(
+                    *args, **kwargs,
+                ),
+            ),
             'ViTSmall': ModelType(
                 resized_image_size=(224, 224),
                 model=lambda output_size, *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(

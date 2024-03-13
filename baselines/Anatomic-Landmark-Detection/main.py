@@ -1,6 +1,7 @@
 from __future__ import print_function, division
 import torch.optim as optim
 import torchvision
+import torch
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from dataLoader import Rescale, RandomCrop, ToTensor, LandmarksDataset
@@ -36,9 +37,10 @@ parser.add_argument("--unsupervisedCsv", type=str, default="cepha_val.csv")
 
 def main():
     config = parser.parse_args()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model_ft = models.fusionVGG19(
         torchvision.models.vgg19_bn(pretrained=True), config
-    ).cuda(config.use_gpu)
+    ).to(device)
     print("image scale ", config.image_scale)
     print("GPU: ", config.use_gpu)
 
@@ -90,7 +92,7 @@ def main():
         print(idx, "-------------------->>>>", para_list[idx])
 
     # if use_gpu:
-    model_ft = model_ft.cuda(config.use_gpu)
+    model_ft = model_ft.to(device)
     criterion = lossFunction.HeatmapOffsetmapLoss(config)
 
     optimizer_ft = optim.Adadelta(
