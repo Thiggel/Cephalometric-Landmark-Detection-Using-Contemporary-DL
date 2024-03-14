@@ -121,4 +121,7 @@ class LandmarksDataset(Dataset):
         if self.transform:
             sample = self.transform(sample)
 
+        print(landmarks)
+        print(sample["landmarks"])
+
         return sample

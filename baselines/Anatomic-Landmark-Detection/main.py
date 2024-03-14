@@ -44,42 +44,48 @@ def main():
     print("image scale ", config.image_scale)
     print("GPU: ", config.use_gpu)
 
-    transform_origin = torchvision.transforms.Compose(
-        [Rescale(config.image_scale), ToTensor()]
-    )
+    if not config.new_dataset:
+            transform_origin=torchvision.transforms.Compose([
+                            Rescale(config.image_scale),
+                            ToTensor()
+                            ])
 
-    train_dataset_origin = LandmarksDataset(
-        csv_file=config.dataRoot + config.trainingSetCsv,
-        root_dir=config.dataRoot + config.supervised_dataset_train,
-        transform=transform_origin,
-        landmarksNum=config.landmarkNum,
-    )
+            train_dataset_origin = LandmarksDataset(csv_file=config.dataRoot + config.trainingSetCsv,
+                                                        root_dir=config.dataRoot + config.supervised_dataset_train,
+                                                        transform=transform_origin,
+                                                        landmarksNum=config.landmarkNum
+                                                        )
 
-    val_dataset = LandmarksDataset(
-        csv_file=config.dataRoot + config.testSetCsv,
-        root_dir=config.dataRoot + config.supervised_dataset_test,
-        transform=transform_origin,
-        landmarksNum=config.landmarkNum,
-    )
+            val_dataset = LandmarksDataset(csv_file=config.dataRoot + config.testSetCsv,
+                                                        root_dir=config.dataRoot + config.supervised_dataset_test,
+                                                        transform=transform_origin,
+                                                        landmarksNum=config.landmarkNum
+                                                        )
 
-    train_dataloader_t = DataLoader(
-        train_dataset_origin,
-        batch_size=config.batchSize,
-        shuffle=False,
-        num_workers=18,
-    )
 
-    val_dataloader_t = DataLoader(
-        val_dataset, batch_size=config.batchSize, shuffle=False, num_workers=18
-    )
-    train_dataloader = []
-    val_dataloader = []
-    # pre-load all data into memory for efficient training
-    for data in tqdm(train_dataloader_t):
-        train_dataloader.append(data)
+            train_dataloader_t = DataLoader(train_dataset_origin, batch_size=config.batchSize,
+                                shuffle=False, num_workers=18)
 
-    for data in tqdm(val_dataloader_t):
-        val_dataloader.append(data)
+            val_dataloader_t = DataLoader(val_dataset, batch_size=config.batchSize,
+                                    shuffle=False, num_workers=18)
+            train_dataloader = []
+            val_dataloader = []
+            # pre-load all data into memory for efficient training
+            for data in tqdm(train_dataloader_t):
+                train_dataloader.append(data)
+
+            for data in tqdm(val_dataloader_t):
+                val_dataloader.append(data)
+
+        else:
+            datamodule = LateralSkullRadiographDataModule(
+                resized_image_size=config.image_scale,
+                resized_point_reference_frame_size=config.image_scale,
+                batch_size=config.batchSize,
+            )
+
+            train_dataloader = list(datamodule.train_dataloader())
+            val_dataloader = list(datamodule.val_dataloader())
 
     print(len(train_dataloader), len(val_dataloader))
 
