@@ -3,6 +3,7 @@ import torch
 import time
 import utils
 from tqdm import tqdm
+from matplotlib import pyplot as plt
 
 
 def train_model(model, dataloaders, criterion, optimizer, config):
@@ -73,6 +74,7 @@ def train_model(model, dataloaders, criterion, optimizer, config):
                 torch.mean((train_SDR), 0).detach().cpu().numpy(),
             )
             # validation on val dataset
+            show_results(model, dataloaders, config)
             val(model, dataloaders, criterion, optimizer, config)
 
     time_elapsed = time.time() - since
@@ -86,6 +88,37 @@ def train_model(model, dataloaders, criterion, optimizer, config):
 best_MRE = 10000
 best_SDR = []
 best_SD = 0
+
+
+def show_results(model, dataloaders, config):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    fig, axs = plt.subplots(
+        nrows=1,
+        ncols=5,
+        figsize=(60, 100)
+    )
+
+    for i in range(5):
+        data = dataloaders["val"][i]
+
+        inputs, labels = data["image"], data["landmarks"]
+        inputs = inputs.to(device)
+
+        heatmaps = model(inputs)
+
+        predicted_landmarks = utils.regression_voting(heatmaps, config.R2).to(
+            device
+        )
+
+        axs[i].imshow(inputs[0].cpu().numpy().squeeze(), cmap='gray')
+        axs[i].scatter(*zip(*labels[0]), color='red', s=20)
+        axs[i].scatter(*zip(*predicted_landmarks[0]), color='blue', s=20)
+        axs[i].axis('off')
+
+    plt.tight_layout()
+
+    plt.savefig("results.png")
 
 
 def val(model, dataloaders, criterion, optimizer, config):
