@@ -399,6 +399,7 @@ class fusionVGG19(nn.Module):
 class ChenLandmarkPrediction(L.LightningModule):
     def __init__(
         self,
+        point_ids: list[str],
         batch_size: int = 32,
         output_size: int = 19,
         original_image_size: int = (1920, 1080),
@@ -424,6 +425,8 @@ class ChenLandmarkPrediction(L.LightningModule):
             original_image_size=original_image_size,
             resized_image_size=resized_image_size,
         )
+
+        self.point_ids = point_ids
 
         self.reduce_lr_patience = reduce_lr_patience
 

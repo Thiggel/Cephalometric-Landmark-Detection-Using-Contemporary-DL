@@ -154,10 +154,18 @@ class LateralSkullRadiographDataset(Dataset):
         x_ratio = self.resized_image_size[1] / self.original_image_size[1]
         y_ratio = self.resized_image_size[0] / self.original_image_size[0]
 
-        return [
+        resized = [
             point['x'] * x_ratio,
             point['y'] * y_ratio,
         ]
+
+        if resized[0] > self.resized_image_size[1]:
+            resized[0] = -1
+
+        if resized[1] > self.resized_image_size[0]:
+            resized[1] = -1
+
+        return resized
 
     def _load_points(self, index: int, resize=True) -> list[torch.Tensor]:
         points_str = self.data_frame.iloc[index]['points']
