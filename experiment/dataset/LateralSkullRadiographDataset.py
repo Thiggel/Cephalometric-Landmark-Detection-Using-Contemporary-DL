@@ -31,6 +31,10 @@ class LateralSkullRadiographDataset(Dataset):
         self._get_metadata()
         self.data_frame = pd.read_csv(
             os.path.join(root_dir, csv_file),
+            dtype={
+                'document': str,
+                'points': str,
+            }
         )
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -82,6 +86,9 @@ class LateralSkullRadiographDataset(Dataset):
             self.root_dir,
             f"images/{self.data_frame.iloc[index]['document']}"
         )
+
+        if not os.path.exists(img_name):
+            img_name += '.jpg'
 
         image = Image.open(img_name).convert('L')
 
