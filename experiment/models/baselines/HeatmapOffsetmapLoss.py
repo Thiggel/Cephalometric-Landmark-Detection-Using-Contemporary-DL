@@ -108,7 +108,12 @@ class HeatmapOffsetmapLoss(nn.Module):
         batch_size, num_points, h, w = feature_maps.size()
         num_points = num_points // 3
 
-        landmarks = landmarks.long()
+        landmarks = landmarks.long().clamp(min=0)
+
+        landmarks = torch.stack([
+            landmarks[:, :, 0].clamp(max=w - 1),
+            landmarks[:, :, 1].clamp(max=h - 1),
+        ], dim=2)
 
         self.init_general_heatmap(h, w)
         self.init_general_offsetmap_x(h, w)
