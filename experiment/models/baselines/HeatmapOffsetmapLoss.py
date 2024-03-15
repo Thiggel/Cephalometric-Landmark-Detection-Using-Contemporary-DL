@@ -6,7 +6,6 @@ import torch.nn as nn
 class HeatmapOffsetmapLoss(nn.Module):
     def __init__(
         self,
-        config,
         heatmap_radius: int = 40,
         offsetmap_radius: int = 40,
     ):
@@ -101,6 +100,45 @@ class HeatmapOffsetmapLoss(nn.Module):
 
         self.general_heatmap[mask] = 1
 
+    def regression_voting(self, heatmap, R):
+        # print("11", time.asctime())
+        topN = int(R * R * 3.1415926)
+        imageNum, featureNum, h, w = heatmap.size()
+        landmarkNum = int(featureNum / 3)
+        heatmap = heatmap.contiguous().view(imageNum, featureNum, -1)
+
+        predicted_landmarks = torch.zeros(
+            (imageNum, landmarkNum, 2),
+            device=self.device
+        )
+
+        Pmap = heatmap[:, 0:landmarkNum, :].data
+        Xmap = torch.round(heatmap[:, landmarkNum : landmarkNum * 2, :].data * R).long() * w
+        Ymap = torch.round(heatmap[:, landmarkNum * 2 : landmarkNum * 3, :].data * R).long()
+        topkP, indexs = torch.topk(Pmap, topN)
+        # ~ plt.imshow(Pmap.reshape(imageNum, landmarkNum, h,w)[0][0], cmap='gray', interpolation='nearest')
+        for imageId in range(imageNum):
+            for landmarkId in range(landmarkNum):
+
+                topnXoff = Xmap[imageId][landmarkId][
+                    indexs[imageId][landmarkId]
+                ]  # offset in x direction
+                topnYoff = Ymap[imageId][landmarkId][
+                    indexs[imageId][landmarkId]
+                ]  # offset in y direction
+
+                VotePosi = topnXoff + topnYoff + indexs[imageId][landmarkId]
+                
+                tem = VotePosi[VotePosi >= 0]
+                maxid = 0
+                if len(tem) > 0:
+                    maxid = torch.argmax(torch.bincount(tem))
+                x = maxid // w
+                y = maxid - x * w
+                x, y = x / (h - 1), y / (w - 1)
+                predicted_landmarks[imageId][landmarkId] = torch.tensor([y, x], device=self.device)
+        return predicted_landmarks
+
     def forward(
         self,
         feature_maps: torch.Tensor, 
@@ -108,14 +146,18 @@ class HeatmapOffsetmapLoss(nn.Module):
     ) -> torch.Tensor:
         batch_size, num_points, h, w = feature_maps.size()
         num_points = num_points // 3
-        landmarks = (
-            landmarks.to(self.device) * torch.tensor([h, w], device=self.device)
-        ).long()
+
+        landmarks = landmarks.long()
 
         self.init_general_heatmap(h, w)
         self.init_general_offsetmap_x(h, w)
         self.init_general_offsetmap_y(h, w)
         self.init_offset_and_heatmaps(batch_size, num_points, h, w)
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(4, num_points, figsize=(100, 100))
+
+        landmark_predictions = self.regression_voting(feature_maps, 41)
+
 
         for image_id in range(batch_size):
             for landmark_id in range(num_points):
@@ -123,19 +165,40 @@ class HeatmapOffsetmapLoss(nn.Module):
                 y = landmarks[image_id, landmark_id, 1]
 
                 self.heatmap[image_id, landmark_id, :, :] = self.general_heatmap[
-                    h - x : 2 * h - x,
-                    w - y: 2 * w - y,
+                    h - y : 2 * h - y,
+                    w - x : 2 * w - x,
                 ]
 
                 self.offsetmap_x[image_id, landmark_id, :, :] = self.general_offsetmap_x[
-                    h - x : 2 * h - x,
-                    w - y : 2 * w - y,
+                    h - y : 2 * h - y,
+                    w - x : 2 * w - x,
                 ]
 
                 self.offsetmap_y[image_id, landmark_id, :, :] = self.general_offsetmap_y[
-                    h - x : 2 * h - x,
-                    w - y : 2 * w - y,
+                    h - y : 2 * h - y,
+                    w - x : 2 * w - x,
                 ]
+
+                ax[0, landmark_id].imshow(feature_maps[image_id, landmark_id, :, :].detach().cpu().numpy())
+                ax[1, landmark_id].imshow(self.heatmap[image_id, landmark_id, :, :].cpu().numpy())
+                ax[2, landmark_id].imshow(self.offsetmap_x[image_id, landmark_id, :, :].cpu().numpy())
+                ax[3, landmark_id].imshow(self.offsetmap_y[image_id, landmark_id, :, :].cpu().numpy())
+                ax[0, landmark_id].scatter(x, y, c="r")
+                ax[0, landmark_id].scatter(
+                    landmark_predictions[image_id, landmark_id, 0],
+                    landmark_predictions[image_id, landmark_id, 1],
+                    c="b"
+                )
+                ax[1, landmark_id].scatter(x, y, c="r")
+                ax[2, landmark_id].scatter(x, y, c="r")
+                ax[3, landmark_id].scatter(x, y, c="r")
+                ax[0, landmark_id].axis("off")
+                ax[1, landmark_id].axis("off")
+                ax[2, landmark_id].axis("off")
+                ax[3, landmark_id].axis("off")
+
+        plt.tight_layout()
+        plt.savefig("heatmap_offsetmap.png")
 
         indexs = self.heatmap > 0
         losses = [

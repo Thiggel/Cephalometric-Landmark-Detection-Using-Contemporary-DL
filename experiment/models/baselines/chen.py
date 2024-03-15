@@ -441,7 +441,7 @@ class ChenLandmarkPrediction(L.LightningModule):
         return self.get_points(output)
 
     def get_points(self, model_output: torch.Tensor):
-        return self.regression_voting([model_output], 40)
+        return self.regression_voting([model_output], 41)
 
     def regression_voting(self, heatmaps, R):
         # print("11", time.asctime())
@@ -480,7 +480,7 @@ class ChenLandmarkPrediction(L.LightningModule):
                 x = maxid // w
                 y = maxid - x * w
                 x, y = x / (h - 1), y / (w - 1)
-                predicted_landmarks[imageId][landmarkId] = torch.tensor([x, y], device=self.device)
+                predicted_landmarks[imageId][landmarkId] = torch.tensor([y, x], device=self.device)
         return predicted_landmarks
 
     def step(
