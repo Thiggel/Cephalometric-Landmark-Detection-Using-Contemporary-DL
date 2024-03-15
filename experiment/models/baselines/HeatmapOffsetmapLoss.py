@@ -46,7 +46,7 @@ class HeatmapOffsetmapLoss(nn.Module):
             height * 2, device=self.device, dtype=torch.float32
         ).view(-1, 1).expand(height * 2, width * 2)
 
-        self.general_offsetmap_x = height - self.general_offsetmap_x2
+        self.general_offsetmap_x = height - self.general_offsetmap_x
         self.general_offsetmap_x /= offsetmap_radius
 
     def init_general_offsetmap_y(
@@ -59,7 +59,7 @@ class HeatmapOffsetmapLoss(nn.Module):
             width * 2, device=self.device, dtype=torch.float32
         ).view(1, -1).expand(height * 2, width * 2)
 
-        self.general_offsetmap_y = width - self.general_offsetmap_y2
+        self.general_offsetmap_y = width - self.general_offsetmap_y
 
         self.general_offsetmap_y /= offsetmap_radius
 
