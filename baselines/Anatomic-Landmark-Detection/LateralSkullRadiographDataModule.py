@@ -10,14 +10,15 @@ from LateralSkullRadiographDataset import LateralSkullRadiographDataset
 class LateralSkullRadiographDataModule(L.LightningDataModule):
     def __init__(
         self,
-        root_dir: str = '../../dataset/',
-        csv_file: str = 'all_images_same_points.csv',
+        root_dir: str = '../../dataset/novel',
+        csv_file: str = 'all_images_37_points.csv',
         transform: Callable = None,
         splits: tuple[int, int, int] = (0.8, 0.1, 0.1),
         batch_size: int = 32,
         crop: bool = False,
         resized_image_size: tuple[int, int] = (224, 224),
         resized_point_reference_frame_size: tuple[int, int] = (224, 224),
+        flip_augmentations: bool = False,
     ):
         super().__init__()
 
@@ -27,7 +28,8 @@ class LateralSkullRadiographDataModule(L.LightningDataModule):
             transform=transform,
             crop=crop,
             resized_image_size=resized_image_size,
-            resized_point_reference_frame_size=resized_point_reference_frame_size
+            resized_point_reference_frame_size=resized_point_reference_frame_size,
+            flip_augmentations=flip_augmentations
         )
 
         self.train_dataset, self.val_dataset, self.test_dataset = random_split(

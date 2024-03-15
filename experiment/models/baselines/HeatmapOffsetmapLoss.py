@@ -6,6 +6,7 @@ import torch.nn as nn
 class HeatmapOffsetmapLoss(nn.Module):
     def __init__(
         self,
+        config,
         heatmap_radius: int = 40,
         offsetmap_radius: int = 40,
     ):
@@ -107,13 +108,9 @@ class HeatmapOffsetmapLoss(nn.Module):
     ) -> torch.Tensor:
         batch_size, num_points, h, w = feature_maps.size()
         num_points = num_points // 3
-
-        landmarks = landmarks.long().clamp(min=0)
-
-        landmarks = torch.stack([
-            landmarks[:, :, 0].clamp(max=w - 1),
-            landmarks[:, :, 1].clamp(max=h - 1),
-        ], dim=2)
+        landmarks = (
+            landmarks.to(self.device) * torch.tensor([h, w], device=self.device)
+        ).long()
 
         self.init_general_heatmap(h, w)
         self.init_general_offsetmap_x(h, w)
@@ -126,18 +123,18 @@ class HeatmapOffsetmapLoss(nn.Module):
                 y = landmarks[image_id, landmark_id, 1]
 
                 self.heatmap[image_id, landmark_id, :, :] = self.general_heatmap[
-                    h - y : 2 * h - y,
-                    w - x: 2 * w - x,
+                    h - x : 2 * h - x,
+                    w - y: 2 * w - y,
                 ]
 
                 self.offsetmap_x[image_id, landmark_id, :, :] = self.general_offsetmap_x[
-                    h - y : 2 * h - y,
-                    w - x: 2 * w - x,
+                    h - x : 2 * h - x,
+                    w - y : 2 * w - y,
                 ]
 
                 self.offsetmap_y[image_id, landmark_id, :, :] = self.general_offsetmap_y[
-                    h - y : 2 * h - y,
-                    w - x: 2 * w - x,
+                    h - x : 2 * h - x,
+                    w - y : 2 * w - y,
                 ]
 
         indexs = self.heatmap > 0

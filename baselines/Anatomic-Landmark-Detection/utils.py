@@ -25,6 +25,7 @@ def get_statistical_results(offset, config):
             torch.sum(torch.pow(landmarkCol - MRE[landmarkId], 2))
             / (landmarkCol.shape[0] - 1)
         )
+
     return SDR, SD, MRE
 
 
@@ -74,15 +75,32 @@ def Mydist(a, b):
     return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 
-def calculate_deviation(coordinates1, lables):
-    coordinates1_b = coordinates1.clone()
-    lables_b = lables.clone()
+def calculate_deviation(coordinates1, lables, new_dataset):
+    predictions = coordinates1.clone()
+    targets = lables.clone()
 
-    coordinates1_b[:, :, 0] = coordinates1_b[:, :, 0] * 1934
-    coordinates1_b[:, :, 1] = coordinates1_b[:, :, 1] * 2399
+    if new_dataset:
+        predictions[:, :, 0] = predictions[:, :, 0] * 175.3481
+        predictions[:, :, 1] = predictions[:, :, 1] * 237.23568
 
-    lables_b[:, :, 0] = lables_b[:, :, 0] * 1934
-    lables_b[:, :, 1] = lables_b[:, :, 1] * 2399
+        targets[:, :, 0] = targets[:, :, 0] * 175.3481
+        targets[:, :, 1] = targets[:, :, 1] * 237.23568
 
-    tem_dist = torch.sqrt(torch.sum(torch.pow(coordinates1_b - lables_b, 2), 2))
-    return tem_dist
+    else:
+        predictions[:, :, 0] = predictions[:, :, 0] * 193.4
+        predictions[:, :, 1] = predictions[:, :, 1] * 239.9
+
+        targets[:, :, 0] = targets[:, :, 0] * 193.4
+        targets[:, :, 1] = targets[:, :, 1] * 239.9
+
+    print(predictions)
+    print(targets)
+
+
+    squared_difference = (predictions - targets) ** 2
+    sum_squared_difference = squared_difference.sum(2)
+    distance = sum_squared_difference.sqrt()
+
+    print("Mean distance: ", distance.mean())
+
+    return distance

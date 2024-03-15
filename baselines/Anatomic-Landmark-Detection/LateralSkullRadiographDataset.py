@@ -269,6 +269,8 @@ class LateralSkullRadiographDataset(Dataset):
         image = self.images[idx]
         points = self.points[idx]
 
+        image = image.repeat(3, 1, 1)
+
         if self.transform is not None:
             image = self.transform(image)
 

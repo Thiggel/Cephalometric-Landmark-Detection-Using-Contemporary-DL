@@ -4,6 +4,7 @@ import time
 import utils
 from tqdm import tqdm
 from matplotlib import pyplot as plt
+import torch.nn.functional as F
 
 
 def train_model(model, dataloaders, criterion, optimizer, config):
@@ -29,26 +30,34 @@ def train_model(model, dataloaders, criterion, optimizer, config):
 
                 optimizer.zero_grad()
                 # forward
-                heatmaps = model(inputs)
+                if config.new_model:
+                    predicted_landmarks = model(inputs)
 
-                # loss calculation for one heatmap and two offset maps.
-                loss = criterion(heatmaps[0], labels.detach().cpu())
+                    loss = F.mse_loss(predicted_landmarks, labels.to(device))
+                else:
+                    heatmaps = model(inputs)
+
+                    # loss calculation for one heatmap and two offset maps.
+                    loss = criterion(heatmaps[0], labels.detach().cpu())
+
                 # ~ # backward + optimize only if in training phase
                 loss.backward()
                 optimizer.step()
 
                 if epoch % test_epoch == 0:
                     # landmark prediction. The results are normalized to (0, 1)
-                    predicted_landmarks = utils.regression_voting(
-                        heatmaps, config.R2
-                    ).to(device)
+                    if not config.new_model:
+                        predicted_landmarks = utils.regression_voting(
+                            heatmaps, config.R2
+                        ).to(device)
                     # deviation calculation for all landmarks
                     dev = utils.calculate_deviation(
                         predicted_landmarks.detach(),
                         labels.to(device).detach(),
+                        config.new_dataset,
                     )
-                    train_dev.append(dev)
 
+                    train_dev.append(dev)
                 running_loss += loss.item()
                 pbar.update(config.batchSize)
             pbar.close()
@@ -105,15 +114,29 @@ def show_results(model, dataloaders, config):
         inputs, labels = data["image"], data["landmarks"]
         inputs = inputs.to(device)
 
-        heatmaps = model(inputs)
+        if config.new_model:
+            predicted_landmarks = model(inputs)
+        else:
+            heatmaps = model(inputs)
 
-        predicted_landmarks = utils.regression_voting(heatmaps, config.R2).to(
-            device
-        )
+            predicted_landmarks = utils.regression_voting(heatmaps, config.R2).to(
+                device
+            ) 
 
-        axs[i].imshow(inputs[0].cpu().numpy().squeeze(), cmap='gray')
-        axs[i].scatter(*zip(*labels[0]), color='red', s=20)
-        axs[i].scatter(*zip(*predicted_landmarks[0]), color='blue', s=20)
+        predicted_landmarks = predicted_landmarks * torch.tensor(config.image_scale).to(device)
+
+        labels = labels.to(device) * torch.tensor(config.image_scale).to(device)
+
+        if config.new_dataset:
+            labels = labels.flip(dims=[-1, -2])
+            predicted_landmarks = predicted_landmarks.flip(dims=[-1, -2])
+        else:
+            labels = labels.flip(dims=[-1, -2])
+            predicted_landmarks = predicted_landmarks.flip(dims=[-1, -2])
+
+        axs[i].imshow(inputs[0].permute(1, 2, 0).cpu().numpy().squeeze(), cmap='gray')
+        axs[i].scatter(*zip(*labels[0].cpu()), color='red', s=20)
+        axs[i].scatter(*zip(*predicted_landmarks[0].detach().cpu()), color='blue', s=20)
         axs[i].axis('off')
 
     plt.tight_layout()
@@ -138,15 +161,19 @@ def val(model, dataloaders, criterion, optimizer, config):
             inputs, labels = data["image"], data["landmarks"]
             inputs = inputs.to(device)
             # forward
-            heatmaps = model(inputs)
+            if config.new_model:
+                predicted_landmarks = model(inputs)
+            else:
+                heatmaps = model(inputs)
 
-            # landmark prediction. The results are normalized to (0, 1)
-            predicted_landmarks = utils.regression_voting(heatmaps, config.R2).to(
-                device
-            )
+                # landmark prediction. The results are normalized to (0, 1)
+                predicted_landmarks = utils.regression_voting(heatmaps, config.R2).to(
+                    device
+                )
             # deviation calculation for all predictions
             dev = utils.calculate_deviation(
-                predicted_landmarks.detach(), labels.to(device).detach()
+                predicted_landmarks.detach(), labels.to(device).detach(),
+                config.new_dataset
             )
 
             test_dev.append(dev)
