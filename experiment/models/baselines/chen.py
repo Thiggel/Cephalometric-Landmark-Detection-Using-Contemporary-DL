@@ -9,6 +9,7 @@ import numpy as np
 
 from models.baselines.HeatmapOffsetmapLoss import HeatmapOffsetmapLoss
 from models.losses.MaskedWingLoss import MaskedWingLoss
+from utils.HeatmapHelper import HeatmapHelper
 
 
 class dilationInceptionModule(nn.Module):
@@ -430,6 +431,12 @@ class ChenLandmarkPrediction(L.LightningModule):
 
         self.reduce_lr_patience = reduce_lr_patience
 
+        self.heatmap_helper = HeatmapHelper(
+            original_image_size=original_image_size,
+            resized_image_size=resized_image_size,
+        )
+
+
     def forward_with_heatmaps(self, x):
         x = x.repeat(1, 3, 1, 1)
         output = self.model(x)
@@ -441,47 +448,10 @@ class ChenLandmarkPrediction(L.LightningModule):
         return self.get_points(output)
 
     def get_points(self, model_output: torch.Tensor):
-        return self.regression_voting([model_output], 41)
-
-    def regression_voting(self, heatmaps, R):
-        # print("11", time.asctime())
-        topN = int(R * R * 3.1415926)
-        heatmap = heatmaps[0]
-        imageNum, featureNum, h, w = heatmap.size()
-        landmarkNum = int(featureNum / 3)
-        heatmap = heatmap.contiguous().view(imageNum, featureNum, -1)
-
-        predicted_landmarks = torch.zeros(
-            (imageNum, landmarkNum, 2),
-            device=self.device
+        num_points = model_output.size(1) // 3
+        return self.heatmap_helper.get_highest_points(
+            model_output[:, :num_points]
         )
-
-        Pmap = heatmap[:, 0:landmarkNum, :].data
-        Xmap = torch.round(heatmap[:, landmarkNum : landmarkNum * 2, :].data * R).long() * w
-        Ymap = torch.round(heatmap[:, landmarkNum * 2 : landmarkNum * 3, :].data * R).long()
-        topkP, indexs = torch.topk(Pmap, topN)
-        # ~ plt.imshow(Pmap.reshape(imageNum, landmarkNum, h,w)[0][0], cmap='gray', interpolation='nearest')
-        for imageId in range(imageNum):
-            for landmarkId in range(landmarkNum):
-
-                topnXoff = Xmap[imageId][landmarkId][
-                    indexs[imageId][landmarkId]
-                ]  # offset in x direction
-                topnYoff = Ymap[imageId][landmarkId][
-                    indexs[imageId][landmarkId]
-                ]  # offset in y direction
-
-                VotePosi = topnXoff + topnYoff + indexs[imageId][landmarkId]
-                
-                tem = VotePosi[VotePosi >= 0]
-                maxid = 0
-                if len(tem) > 0:
-                    maxid = torch.argmax(torch.bincount(tem))
-                x = maxid // w
-                y = maxid - x * w
-                x, y = x / (h - 1), y / (w - 1)
-                predicted_landmarks[imageId][landmarkId] = torch.tensor([y, x], device=self.device)
-        return predicted_landmarks
 
     def step(
         self,

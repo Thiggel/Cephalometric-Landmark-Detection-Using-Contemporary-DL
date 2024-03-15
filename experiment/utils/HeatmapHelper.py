@@ -7,12 +7,11 @@ class HeatmapHelper:
         self,
         original_image_size: tuple[int, int],
         resized_image_size: tuple[int, int],
-        resized_point_reference_frame_size: tuple[int, int],
-        patch_size: tuple[int, int],
+        patch_size: tuple[int, int] = (64, 64),
     ):
         self.original_image_size = original_image_size
         self.resized_image_size = resized_image_size
-        self.resized_point_reference_frame_size = resized_point_reference_frame_size
+        self.resized_point_reference_frame_size = resized_image_size
         self.patch_size = patch_size
         self.resized_patch_size = self._get_resized_patch_size()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

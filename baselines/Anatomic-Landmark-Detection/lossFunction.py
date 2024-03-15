@@ -20,6 +20,7 @@ class HeatmapOffsetmapLoss(nn.Module):
 
         self.binary_loss = nn.BCEWithLogitsLoss(None, True)
         self.l1_loss = nn.L1Loss()
+        self.i = 0
 
     def init_offset_and_heatmaps(
         self,
@@ -157,10 +158,14 @@ class HeatmapOffsetmapLoss(nn.Module):
         self.init_general_offsetmap_x(h, w)
         self.init_general_offsetmap_y(h, w)
         self.init_offset_and_heatmaps(batch_size, num_points, h, w)
-        landmark_predictions = self.regression_voting(feature_maps, 41)
 
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(4, num_points, figsize=(100, 100))
+        self.i += 1
+
+        if self.i % 1000 == 0:
+            print("Creating Plots")
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots(4, num_points, figsize=(100, 100))
+            landmark_predictions = self.regression_voting(feature_maps, 41)
 
         for image_id in range(batch_size):
             for landmark_id in range(num_points):
@@ -182,26 +187,29 @@ class HeatmapOffsetmapLoss(nn.Module):
                     w - y : 2 * w - y,
                 ]
 
-                ax[0, landmark_id].imshow(feature_maps[image_id, landmark_id, :, :].detach().cpu().numpy())
-                ax[1, landmark_id].imshow(self.heatmap[image_id, landmark_id, :, :].cpu().numpy())
-                ax[2, landmark_id].imshow(self.offsetmap_x[image_id, landmark_id, :, :].cpu().numpy())
-                ax[3, landmark_id].imshow(self.offsetmap_y[image_id, landmark_id, :, :].cpu().numpy())
-                ax[0, landmark_id].scatter(y, y, c="r")
-                ax[0, landmark_id].scatter(
-                    landmark_predictions[image_id, landmark_id, 0],
-                    landmark_predictions[image_id, landmark_id, 1],
-                    c="b"
-                )
-                ax[1, landmark_id].scatter(y, x, c="r")
-                ax[2, landmark_id].scatter(y, x, c="r")
-                ax[3, landmark_id].scatter(y, x, c="r")
-                ax[0, landmark_id].axis("off")
-                ax[1, landmark_id].axis("off")
-                ax[2, landmark_id].axis("off")
-                ax[3, landmark_id].axis("off")
+            if self.i % 1000 == 0:
+                    ax[0, landmark_id].imshow(feature_maps[image_id, landmark_id, :, :].detach().cpu().numpy())
+                    ax[1, landmark_id].imshow(self.heatmap[image_id, landmark_id, :, :].cpu().numpy())
+                    ax[2, landmark_id].imshow(self.offsetmap_x[image_id, landmark_id, :, :].cpu().numpy())
+                    ax[3, landmark_id].imshow(self.offsetmap_y[image_id, landmark_id, :, :].cpu().numpy())
 
-        plt.tight_layout()
-        plt.savefig("heatmap_offsetmap.png")
+                    ax[0, landmark_id].scatter(y.detach().cpu(), x.detach().cpu(), c="r")
+                    ax[0, landmark_id].scatter(
+                        landmark_predictions[image_id, landmark_id, 0].detach().cpu(),
+                        landmark_predictions[image_id, landmark_id, 1].detach().cpu(),
+                        c="b"
+                    )
+                    ax[1, landmark_id].scatter(y.detach().cpu(), x.detach().cpu(), c="r")
+                    ax[2, landmark_id].scatter(y.detach().cpu(), x.detach().cpu(), c="r")
+                    ax[3, landmark_id].scatter(y.detach().cpu(), x.detach().cpu(), c="r")
+                    ax[0, landmark_id].axis("off")
+                    ax[1, landmark_id].axis("off")
+                    ax[2, landmark_id].axis("off")
+                    ax[3, landmark_id].axis("off")
+
+        if self.i % 1000 == 0:
+            plt.tight_layout()
+            plt.savefig("heatmap_offsetmap.png")
 
 
         indexs = self.heatmap > 0
