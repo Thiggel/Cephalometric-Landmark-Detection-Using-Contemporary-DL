@@ -100,27 +100,6 @@ class HeatmapOffsetmapLoss(nn.Module):
 
         self.general_heatmap[mask] = 1
 
-    def get_highest_points(
-        self,
-        heatmaps: torch.Tensor
-    ) -> torch.Tensor:
-        """
-        For heatmaps of shape (batch_size, num_points, height, width),
-        this function returns the highest points in the shape
-        (batch_size, num_points, 2)
-        """
-        batch_size, num_points, height, width = heatmaps.shape
-        reshaped_heatmaps = heatmaps.reshape(
-            batch_size, num_points, -1
-        )
-
-        argmax_indices_flat = torch.argmax(reshaped_heatmaps, dim=2)
-        y_offset = argmax_indices_flat // width
-        x_offset = argmax_indices_flat % width
-        argmax_indices = torch.stack([x_offset, y_offset], dim=2)
-
-        return argmax_indices
-
     def forward(
         self,
         feature_maps: torch.Tensor, 
