@@ -1,90 +1,78 @@
 from __future__ import print_function, division
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class HeatmapOffsetmapLoss(nn.Module):
     def __init__(
         self,
+        resized_image_size: tuple[int, int],
         heatmap_radius: int = 40,
         offsetmap_radius: int = 40,
     ):
         super().__init__()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
 
         self.heatmap_radius = heatmap_radius
         self.offsetmap_radius = offsetmap_radius
 
-        self.binary_loss = nn.BCEWithLogitsLoss(None, True)
-        self.l1_loss = nn.L1Loss()
+        self.init_offset_and_heatmaps(
+            resized_image_size, heatmap_radius, offsetmap_radius
+        )
 
     def init_offset_and_heatmaps(
         self,
-        batch_size: int,
-        num_points: int,
+        resized_image_size: tuple[int, int],
+        heatmap_radius: int,
+        offsetmap_radius: int
+    ):
+        height, width = resized_image_size
+
+        self.init_general_heatmap(height, width, heatmap_radius)
+        self.init_general_offsetmap_x(height, width, offsetmap_radius)
+        self.init_general_offsetmap_y(height, width, offsetmap_radius)
+
+    def init_general_offsetmap_x(
+        self,
         height: int,
         width: int,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        if not hasattr(self, "offsetmap_x"):
-            self.offsetmap_x = torch.zeros(
-                (batch_size, num_points, height, width),
-                device=self.device
-            )
+        offsetmap_radius: int
+    ):
+        self.general_offsetmap_x = torch.arange(
+            height * 2, device=self.device, dtype=torch.float32
+        ).view(-1, 1).expand(height * 2, width * 2)
 
-        if not hasattr(self, "offsetmap_y"):
-            self.offsetmap_y = torch.zeros(
-                (batch_size, num_points, height, width),
-                device=self.device
-            ) 
+        self.general_offsetmap_x = height - self.general_offsetmap_x2
+        self.general_offsetmap_x /= offsetmap_radius
 
-        if not hasattr(self, "heatmap"):
-            self.heatmap = torch.zeros(
-                (batch_size, num_points, height, width),
-                device=self.device
-            )
+    def init_general_offsetmap_y(
+        self,
+        height: int,
+        width: int,
+        offsetmap_radius: int
+    ):
+        self.general_offsetmap_y = width - torch.arange(
+            width * 2, device=self.device, dtype=torch.float32
+        ).view(1, -1).expand(height * 2, width * 2)
 
-    def init_general_offsetmap_x(self, height: int, width: int):
-        if hasattr(self, "general_offsetmap_x"):
-            pass 
-         
-        self.general_offsetmap_x = torch.ones(
-            (height * 2, width * 2),
-            device=self.device
-        )
+        self.general_offsetmap_y = width - self.general_offsetmap_y2
 
-        for i in range(2 * height):
-            self.general_offsetmap_x[i, :] *= i
+        self.general_offsetmap_y /= offsetmap_radius
 
-        self.general_offsetmap_x = height - self.general_offsetmap_x
-
-        self.general_offsetmap_x /= self.offsetmap_radius
-
-    def init_general_offsetmap_y(self, height: int, width: int):
-        if hasattr(self, "general_offsetmap_y"):
-            pass
-
-        self.general_offsetmap_y = torch.ones(
-            (height * 2, width * 2),
-            device=self.device
-        )
-
-        for i in range(2 * width):
-            self.general_offsetmap_y[:, i] *= i
-
-        self.general_offsetmap_y = width - self.general_offsetmap_y
-
-        self.general_offsetmap_y /= self.offsetmap_radius
-
-    def init_general_heatmap(self, height: int, width: int):
-        if hasattr(self, "general_heatmap"):
-            pass
-
+    def init_general_heatmap(
+        self,
+        height: int,
+        width: int,
+        heatmap_radius: int
+    ):
         self.general_heatmap = torch.zeros(
             (height * 2, width * 2),
             device=self.device
         )
-
-        radius = self.heatmap_radius
 
         y_grid, x_grid = torch.meshgrid(
             torch.arange(0, height * 2, device=self.device),
@@ -96,77 +84,92 @@ class HeatmapOffsetmapLoss(nn.Module):
             (x_grid - width) ** 2
         ).sqrt()
 
-        mask = distance <= radius
+        mask = distance <= heatmap_radius
 
         self.general_heatmap[mask] = 1
 
+    def cut_out_rectanges(
+        self,
+        source: torch.Tensor,
+        points: torch.Tensor,
+        height: int,
+        width: int,
+    ) -> torch.Tensor:
+        batch_size, num_points, _ = points.size()
+        source_height, source_width = source.size()
+
+        x = points[:, :, 0]
+        y = points[:, :, 1]
+
+        x_start = (width - x).view(1, -1, 1, 1) \
+            .expand(batch_size, num_points, source_height, width)
+
+        y_start = (height - y).view(1, -1, 1, 1) \
+            .expand(batch_size, num_points, height, width)
+
+        x_indices = x_start + torch.arange(
+            width, device=self.device
+        ).view(1, 1, 1, -1)
+
+        y_indices = y_start + torch.arange(
+            height, device=self.device
+        ).view(1, 1, -1, 1)
+
+        source = source.view(1, 1, source_height, source_width) \
+            .expand(batch_size, num_points, source_height, source_width)
+
+        vertical_strips = torch.gather(source, 3, x_indices)
+
+        rectangles = torch.gather(vertical_strips, 2, y_indices)
+
+        return rectangles
+
     def forward(
         self,
-        feature_maps: torch.Tensor, 
+        feature_maps: torch.Tensor,
         landmarks: torch.Tensor
     ) -> torch.Tensor:
-        batch_size, num_points, h, w = feature_maps.size()
-        num_points = num_points // 3
+        batch_size, num_maps, height, width = feature_maps.size()
+        num_points = num_maps // 3
 
         landmarks = landmarks.long()
 
-        self.init_general_heatmap(h, w)
-        self.init_general_offsetmap_x(h, w)
-        self.init_general_offsetmap_y(h, w)
-        self.init_offset_and_heatmaps(batch_size, num_points, h, w)
+        heatmaps = self.cut_out_rectanges(
+            self.general_heatmap,
+            landmarks,
+            height,
+            width,
+        )
 
-        for image_id in range(batch_size):
-            for landmark_id in range(num_points):
-                x = landmarks[image_id, landmark_id, 0]
-                y = landmarks[image_id, landmark_id, 1]
+        offsetmap_x = self.cut_out_rectanges(
+            self.general_offsetmap_x,
+            landmarks,
+            height,
+            width,
+        )
 
-                self.heatmap[image_id, landmark_id, :, :] = self.general_heatmap[
-                    h - y : 2 * h - y,
-                    w - x : 2 * w - x,
-                ]
+        offsetmap_y = self.cut_out_rectanges(
+            self.general_offsetmap_y,
+            landmarks,
+            height,
+            width,
+        )
 
-                self.offsetmap_x[image_id, landmark_id, :, :] = self.general_offsetmap_x[
-                    h - y : 2 * h - y,
-                    w - x : 2 * w - x,
-                ]
+        heatmap_loss = F.binary_cross_entropy_with_logits(
+            feature_maps[:, :num_points],
+            heatmaps,
+        )
 
-                self.offsetmap_y[image_id, landmark_id, :, :] = self.general_offsetmap_y[
-                    h - y : 2 * h - y,
-                    w - x : 2 * w - x,
-                ]
+        offsetmap_x_loss = F.l1_loss(
+            feature_maps[:, num_points:num_points * 2],
+            offsetmap_x,
+        )
 
-        indexs = self.heatmap > 0
-        losses = [
-            (
-                [
-                    2 * self.binary_loss(
-                        feature_maps[image_id][landmark_id],
-                        self.heatmap[image_id][landmark_id],
-                    ),
-                    self.l1_loss(
-                        feature_maps[image_id][landmark_id + num_points * 1][
-                            indexs[image_id][landmark_id]
-                        ],
-                        self.offsetmap_x[image_id, landmark_id][
-                            indexs[image_id][landmark_id]
-                        ],
-                    ),
-                    self.l1_loss(
-                        feature_maps[image_id][landmark_id + num_points * 2][
-                            indexs[image_id][landmark_id]
-                        ],
-                        self.offsetmap_y[image_id, landmark_id][
-                            indexs[image_id][landmark_id]
-                        ],
-                    ),
-                ]
-            )
-            for image_id in range(batch_size)
-            for landmark_id in range(num_points)
-        ]
+        offsetmap_y_loss = F.l1_loss(
+            feature_maps[:, num_points * 2:],
+            offsetmap_y,
+        )
 
-        loss = sum([
-            sum(losses[i]) for i in range(batch_size * num_points)
-        ]) / (batch_size * num_points)
+        loss = 2 * heatmap_loss + offsetmap_x_loss + offsetmap_y_loss
 
         return loss

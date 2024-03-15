@@ -419,7 +419,7 @@ class ChenLandmarkPrediction(L.LightningModule):
             resized_image_size,
         )
 
-        self.loss = HeatmapOffsetmapLoss()
+        self.loss = HeatmapOffsetmapLoss(resized_image_size)
 
         self.mm_error = MaskedWingLoss(
             px_to_mm=px_to_mm,
