@@ -171,18 +171,25 @@ class HeatmapOffsetmapLoss(nn.Module):
         heatmap_loss = F.binary_cross_entropy_with_logits(
             feature_maps[:, :num_points],
             heatmaps,
-        )
+            reduction="none",
+        ).mean(dim=(2, 3))
 
         offsetmap_x_loss = F.l1_loss(
             feature_maps[:, num_points:num_points * 2],
             offsetmap_x,
-        )
+            reduction="none",
+        ).mean(dim=(2, 3))
 
         offsetmap_y_loss = F.l1_loss(
             feature_maps[:, num_points * 2:],
             offsetmap_y,
-        )
+            reduction="none",
+        ).mean(dim=(2, 3))
 
         loss = 2 * heatmap_loss + offsetmap_x_loss + offsetmap_y_loss
+
+        mask = (landmarks > 0).prod(-1)
+        
+        loss = (loss * mask).sum() / mask.sum()
 
         return loss

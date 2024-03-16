@@ -2,11 +2,11 @@
 
 #SBATCH --partition=gpu
 #SBATCH --gpus=1
-#SBATCH --job-name=Chen-SparseDataset
+#SBATCH --job-name=ViTSmall-SparseDataset
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=18
 #SBATCH --time=16:00:00
-#SBATCH --output=job_logs/Chen-SparseDataset.out
+#SBATCH --output=job_logs/ViTSmall-SparseDataset.out
 
 module purge
 module load 2022
@@ -17,4 +17,4 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
 cd $HOME/Cephalometry
 conda activate cephalometry
 pip install -r requirements.txt
-python experiment --model_name Chen --batch_size 1 --num_runs 3 --csv_file all_images_44_points_sparse.csv
+python experiment --model_name ViTSmall --num_runs 3 --csv_file all_images_44_points_sparse.csv
