@@ -111,8 +111,8 @@ class HeatmapOffsetmapLoss(nn.Module):
         batch_size, num_points, _ = points.size()
         source_height, source_width = source.size()
 
-        x = points[:, :, 0]
-        y = points[:, :, 1]
+        x = points[:, :, 0].clamp(0, width - 1)
+        y = points[:, :, 1].clamp(0, height - 1)
 
         x_start = (width - x).view(1, -1, 1, 1) \
             .expand(batch_size, num_points, source_height, width)
