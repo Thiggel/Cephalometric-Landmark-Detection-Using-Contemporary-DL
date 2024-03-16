@@ -67,6 +67,7 @@ def run(args: dict, seed: int = 42) -> dict:
         'point_ids': datamodule.dataset.point_ids,
         'output_size': datamodule.dataset.num_points,
         'original_image_size': datamodule.dataset.original_image_size,
+        'original_image_size_mm': datamodule.dataset.original_image_size_mm,
         'resized_image_size': model_type.resized_image_size,
         'batch_size': args.batch_size,
     }
@@ -149,7 +150,14 @@ if __name__ == '__main__':
     all_results = []
 
     for run_idx in range(args.num_runs):
+        start_time = torch.cuda.Event(enable_timing=True)
+
         results = run(args, seed=run_idx)[0]
+
+        end_time = torch.cuda.Event(enable_timing=True)
+        training_time = end_time.elapsed_time(start_time) / 1000 / 60
+        results.update({'training_time': training_time})
+
         all_results.append(results)
 
     print_mean_std(all_results)

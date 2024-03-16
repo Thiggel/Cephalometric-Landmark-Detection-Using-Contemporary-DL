@@ -1,0 +1,20 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu
+#SBATCH --gpus=1
+#SBATCH --job-name=ViTBase-BenchmarkDataset
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=18
+#SBATCH --time=16:00:00
+#SBATCH --output=job_logs/ViTBase-BenchmarkDataset.out
+
+module purge
+module load 2022
+module load Anaconda3/2022.05
+
+export CUBLAS_WORKSPACE_CONFIG=:4096:8
+
+cd $HOME/Cephalometry
+conda activate cephalometry
+pip install -r requirements.txt
+python experiment --model_name ViTBase --num_runs 3 --root_dir dataset/benchmark --csv_file points.csv

@@ -5,6 +5,7 @@ from torch.optim import RMSprop, Adam, SGD
 from torch.optim.lr_scheduler import ReduceLROnPlateau, LambdaLR, CosineAnnealingLR
 
 from models.losses.MaskedWingLoss import MaskedWingLoss
+from models.metrics.MeanRadialError import MeanRadialError
 
 
 class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
@@ -12,6 +13,8 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
         self,
         model: nn.Module,
         point_ids: list[str],
+        original_image_size_mm: tuple[float, float],
+        resized_image_size: int = (224, 224),
         reduce_lr_patience: int = 25,
         optimizer: str = 'sgd_momentum',
         *args,
@@ -27,6 +30,10 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
         self.optimizer_name = optimizer
 
         self.loss = MaskedWingLoss()
+        self.mean_radial_error = MeanRadialError(
+            resized_image_size=resized_image_size,
+            original_image_size_mm=original_image_size_mm,
+        )
 
     def forward(self, x):
         return self.model(x)
@@ -40,11 +47,15 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
 
         predictions = self.model(inputs)
 
-        loss, unreduced_mm_error = self.loss(
+        loss = self.loss(
             predictions,
             targets,
-            with_mm_error=with_mm_error,
         )
+
+        unreduced_mm_error = self.mean_radial_error(
+            predictions,
+            targets,
+        ) if with_mm_error else None
 
         return loss, unreduced_mm_error, predictions, targets
 
@@ -101,19 +112,19 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
 
         self.log(
             'percent_under_1mm',
-            self.loss.percent_under_n_mm(predictions, targets, 1)
+            self.mean_radial_error.percent_under_n_mm(mm_error, targets, 1)
         )
         self.log(
             'percent_under_2mm',
-            self.loss.percent_under_n_mm(predictions, targets, 2)
+            self.mean_radial_error.percent_under_n_mm(mm_error, targets, 2)
         )
         self.log(
             'percent_under_3mm',
-            self.loss.percent_under_n_mm(predictions, targets, 3)
+            self.mean_radial_error.percent_under_n_mm(mm_error, targets, 3)
         )
         self.log(
             'percent_under_4mm',
-            self.loss.percent_under_n_mm(predictions, targets, 4)
+            self.mean_radial_error.percent_under_n_mm(mm_error, targets, 4)
         )
 
         return loss

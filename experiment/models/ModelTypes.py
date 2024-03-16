@@ -1,12 +1,16 @@
 from dataclasses import dataclass
 from enum import Enum
 import torch.nn as nn
+import torchvision
 
 from models.DirectPointPredictionBasedLandmarkDetection import \
     DirectPointPredictionBasedLandmarkDetection
-from models.baselines.chen import ChenLandmarkPrediction
-from models.ViT import ViT
-from models.ConvNextV2 import ConvNextV2
+from models.HeatmapBasedLandmarkDetection import \
+    HeatmapBasedLandmarkDetection
+from models.baselines.chen import fusionVGG19
+from models.backbones.ViT import ViT
+from models.backbones.ConvNextV2 import ConvNextV2
+from models.backbones.Segformer import Segformer
 
 
 @dataclass
@@ -24,7 +28,39 @@ class ModelTypes(Enum):
         return {
             'Chen': ModelType(
                 resized_image_size=(800, 640),
-                model=lambda *args, **kwargs: ChenLandmarkPrediction(
+                model=lambda \
+                    batch_size, \
+                    output_size, \
+                    resized_image_size, \
+                    *args, \
+                    **kwargs \
+                : HeatmapBasedLandmarkDetection(
+                    model=fusionVGG19(
+                        torchvision.models.vgg19_bn(pretrained=True),
+                        batch_size,
+                        output_size,
+                        resized_image_size,
+                    ),
+                    *args, **kwargs,
+                ),
+            ),
+            'SegformerSmall': ModelType(
+                resized_image_size=(512, 512),
+                model=lambda output_size, *args, **kwargs: HeatmapBasedLandmarkDetection(
+                    model=Segformer(
+                        model_name='nvidia/segformer-b2-finetuned-ade-512-512',
+                        output_size=output_size,
+                    ),
+                    *args, **kwargs,
+                ),
+            ),
+            'SegformerLarge': ModelType(
+                resized_image_size=(640, 640),
+                model=lambda output_size, *args, **kwargs: HeatmapBasedLandmarkPrediction(
+                    model=Segformer(
+                        model_name='nvidia/segformer-b5-finetuned-ade-640-640',
+                        output_size=output_size,
+                    ),
                     *args, **kwargs,
                 ),
             ),
@@ -37,27 +73,6 @@ class ModelTypes(Enum):
                     ),
                     *args, **kwargs,
                 ),
-            ),
-            'ViTSmallWithDownscaling': ModelType(
-                resized_image_size=(902, 902),
-                model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
-                    model=ViT(
-                        model_name='WinKawaks/vit-small-patch16-224',
-                        downscale=True,
-                    ),
-                    *args, **kwargs,
-                ),
-            ),
-            'ViTSmallWithComplexMLPHead': ModelType(
-                resized_image_size=(224, 224),
-                model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
-                    model=ViT(
-                        model_name='WinKawaks/vit-small-patch16-224',
-                        complex_mlp_head=True,
-                    ),
-                    *args, **kwargs,
-                ),
-
             ),
             'ViTBase': ModelType(
                 resized_image_size=(224, 224),
@@ -77,7 +92,7 @@ class ModelTypes(Enum):
                     *args, **kwargs,
                 ),
             ),
-            'ConvNextV2Small': ModelType(
+            'ConvNextSmall': ModelType(
                 resized_image_size=(224, 224),
                 model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
                     model=ConvNextV2(
@@ -86,7 +101,7 @@ class ModelTypes(Enum):
                     *args, **kwargs,
                 ),
             ),
-            'ConvNextV2Base': ModelType(
+            'ConvNextBase': ModelType(
                 resized_image_size=(224, 224),
                 model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
                     model=ConvNextV2(
@@ -95,7 +110,7 @@ class ModelTypes(Enum):
                     *args, **kwargs,
                 ),
             ),
-            'ConvNextV2LargeImageSize': ModelType(
+            'ConvNextLargeImageSize': ModelType(
                 resized_image_size=(384, 384),
                 model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
                     model=ConvNextV2(

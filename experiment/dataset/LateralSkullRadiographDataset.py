@@ -73,7 +73,10 @@ class LateralSkullRadiographDataset(Dataset):
                     metadata['image_width'],
                 )
 
-                self.px_too_mm = metadata['px_to_mm']
+                self.original_image_size_mm = (
+                    metadata['image_height_mm'],
+                    metadata['image_width_mm'],
+                )
 
     def _parse_dimensions(self, x: str) -> tuple[int, int]:
         try:
