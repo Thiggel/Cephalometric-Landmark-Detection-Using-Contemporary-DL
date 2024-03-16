@@ -36,6 +36,7 @@ class LateralSkullRadiographDataset(Dataset):
                 'points': str,
             }
         )
+        self.csv_file = csv_file
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.resize = transforms.Resize(resized_image_size)
@@ -104,11 +105,17 @@ class LateralSkullRadiographDataset(Dataset):
 
     @property
     def _saved_images_path(self) -> str:
-        return os.path.join(self.root_dir, f'images_{self.resized_image_size}.pt')
+        return os.path.join(
+            self.root_dir,
+            f'images_{self.resized_image_size}_{self.csv_file}.pt'
+        )
 
     @property
     def _saved_points_path(self) -> str:
-        return os.path.join(self.root_dir, f'points_{self.resized_image_size}.pt')
+        return os.path.join(
+            self.root_dir,
+            f'points_{self.resized_image_size}_{self.csv_file}.pt'
+        )
 
     def _load_dataset(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         images = []
