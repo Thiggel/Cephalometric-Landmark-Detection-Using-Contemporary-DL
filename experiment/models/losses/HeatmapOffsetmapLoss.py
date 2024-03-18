@@ -10,7 +10,7 @@ class HeatmapOffsetmapLoss(nn.Module):
         resized_image_size: tuple[int, int],
         heatmap_radius: int = 40,
         offsetmap_radius: int = 40,
-        gaussian: bool = True,
+        gaussian: bool = False,
     ):
         super().__init__()
 
