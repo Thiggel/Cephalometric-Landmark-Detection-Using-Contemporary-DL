@@ -5,7 +5,7 @@ def clamp_points(
     points: torch.Tensor,
     images: torch.Tensor
 ) -> torch.Tensor:
-    image_height, image_width = images.shape[-1], images.shape[-2]
+    image_height, image_width = images.shape[-2:]
 
     points = torch.clamp(points, min=0)
     points[..., 0] = torch.clamp(points[..., 0], max=image_width)
