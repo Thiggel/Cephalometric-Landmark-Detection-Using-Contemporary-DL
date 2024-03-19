@@ -10,13 +10,10 @@ class HeatmapOffsetmapLoss(nn.Module):
         resized_image_size: tuple[int, int],
         heatmap_radius: int = 40,
         offsetmap_radius: int = 40,
-        gaussian: bool = False,
+        gaussian: bool = True,
     ):
         super().__init__()
-
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
-        )
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.heatmap_radius = heatmap_radius
         self.offsetmap_radius = offsetmap_radius
@@ -60,7 +57,7 @@ class HeatmapOffsetmapLoss(nn.Module):
         width: int,
         offsetmap_radius: int
     ):
-        self.general_offsetmap_y = width - torch.arange(
+        self.general_offsetmap_y = torch.arange(
             width * 2, device=self.device, dtype=torch.float32
         ).view(1, -1).expand(height * 2, width * 2)
 
@@ -91,18 +88,16 @@ class HeatmapOffsetmapLoss(nn.Module):
                 device=self.device
             )
 
-        distance = (
-            (y_grid - height) ** 2 +
-            (x_grid - width) ** 2
-        ).sqrt()
+            distance = (
+                (y_grid - height) ** 2 +
+                (x_grid - width) ** 2
+            ).sqrt()
 
-        mask = distance <= heatmap_radius
+            mask = distance <= heatmap_radius
 
-        self.general_heatmap[~mask] = 0
+            self.general_heatmap[mask] = 1
 
-
-    def cut_out_rectanges(
-        self,
+    def cut_out_rectangles( self,
         source: torch.Tensor,
         points: torch.Tensor,
         height: int,
@@ -137,31 +132,42 @@ class HeatmapOffsetmapLoss(nn.Module):
 
         return rectangles
 
+    def clamp_landmarks(
+        self,
+        landmarks: torch.Tensor,
+        height: int,
+        width: int,
+    ) -> torch.Tensor:
+        landmarks[..., 0] = landmarks[..., 0].clamp(1, width - 1)
+        landmarks[..., 1] = landmarks[..., 1].clamp(1, height - 1)
+
+        return landmarks
+
     def forward(
         self,
-        feature_maps: torch.Tensor,
+        feature_maps: torch.Tensor, 
         landmarks: torch.Tensor
     ) -> torch.Tensor:
-        batch_size, num_maps, height, width = feature_maps.size()
-        num_points = num_maps // 3
+        batch_size, num_points, height, width = feature_maps.size()
+        num_points = num_points // 3
 
-        landmarks = landmarks.long()
+        landmarks = self.clamp_landmarks(landmarks.long(), height, width).long()
 
-        heatmaps = self.cut_out_rectanges(
+        heatmaps = self.cut_out_rectangles(
             self.general_heatmap,
             landmarks,
             height,
             width,
         )
 
-        offsetmap_x = self.cut_out_rectanges(
+        offsetmap_x = self.cut_out_rectangles(
             self.general_offsetmap_x,
             landmarks,
             height,
             width,
         )
 
-        offsetmap_y = self.cut_out_rectanges(
+        offsetmap_y = self.cut_out_rectangles(
             self.general_offsetmap_y,
             landmarks,
             height,
@@ -185,11 +191,10 @@ class HeatmapOffsetmapLoss(nn.Module):
             offsetmap_y,
             reduction="none",
         ).mean(dim=(2, 3))
-
+        
         loss = 2 * heatmap_loss + offsetmap_x_loss + offsetmap_y_loss
 
         mask = (landmarks > 0).prod(-1)
-        
         loss = (loss * mask).sum() / mask.sum()
 
         return loss
