@@ -24,7 +24,8 @@ class ImagePredictionLogger(Callback):
         pl_module: LightningModule
     ) -> None:
         images, targets = next(iter(trainer.datamodule.val_dataloader()))
-        images = images[:self.num_samples]
+        num_samples = min(self.num_samples, images.size(0))
+        images = images[:num_samples]
 
         preds = pl_module(images)
 
@@ -35,15 +36,16 @@ class ImagePredictionLogger(Callback):
 
         fig, axs = plt.subplots(
             nrows=1,
-            ncols=self.num_samples,
-            figsize=(60, 100)
+            ncols=num_samples,
+            figsize=(20, num_samples * 20)
         )
 
         for i, (image, target, pred) in enumerate(zip(images, targets, preds)):
-            axs[i].imshow(image, cmap='gray')
-            axs[i].scatter(*zip(*target), color='red', s=20)
-            axs[i].scatter(*zip(*pred), color='blue', s=20)
-            axs[i].axis('off')
+            axis = axs if num_samples == 1 else axs[i]
+            axis.imshow(image, cmap='gray')
+            axis.scatter(*zip(*target), color='red', s=20)
+            axis.scatter(*zip(*pred), color='blue', s=20)
+            axis.axis('off')
 
         plt.tight_layout()
 

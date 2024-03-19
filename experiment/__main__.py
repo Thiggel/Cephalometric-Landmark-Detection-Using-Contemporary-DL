@@ -1,4 +1,5 @@
 from datetime import date
+import time
 import argparse
 import lightning as L
 from lightning.pytorch.callbacks import (
@@ -150,12 +151,13 @@ if __name__ == '__main__':
     all_results = []
 
     for run_idx in range(args.num_runs):
-        start_time = torch.cuda.Event(enable_timing=True)
+        start_time = time.time()
 
         results = run(args, seed=run_idx)[0]
 
-        end_time = torch.cuda.Event(enable_timing=True)
-        training_time = end_time.elapsed_time(start_time) / 1000 / 60
+        end_time = time.time()
+        seconds_to_hours = 1 / 60 / 60
+        training_time = (end_time - start_time) / seconds_to_hours
         results.update({'training_time': training_time})
 
         all_results.append(results)
