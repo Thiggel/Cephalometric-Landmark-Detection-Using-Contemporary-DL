@@ -3,6 +3,9 @@ import torch
 from torch import nn
 from torch.optim import RMSprop, Adam, SGD
 from torch.optim.lr_scheduler import ReduceLROnPlateau, LambdaLR, CosineAnnealingLR
+from typing import Union
+import matplotlib.pyplot as plt
+from utils.clamp_points import clamp_points
 
 from models.losses.MaskedWingLoss import MaskedWingLoss
 from models.metrics.MeanRadialError import MeanRadialError
@@ -37,6 +40,29 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
 
     def forward(self, x):
         return self.model(x)
+
+    def show_images(
+        self,
+        images: torch.Tensor,
+        targets: torch.Tensor,
+    ) -> None:
+        preds = self(images)
+
+        preds = clamp_points(preds, images).cpu().numpy()
+        targets = clamp_points(targets, images).cpu().numpy()
+
+        images = images.permute(0, 2, 3, 1).cpu().numpy()
+
+        num_samples = images.shape[0]
+
+        fig, axs = plt.subplots(1, num_samples, figsize=(20, 20 * num_samples))
+
+        for i, (image, target, pred) in enumerate(zip(images, targets, preds)):
+            axis = axs if num_samples == 1 else axs[i]
+            axis.imshow(image, cmap='gray')
+            axis.scatter(*zip(*target), color='red', s=20)
+            axis.scatter(*zip(*pred), color='blue', s=20)
+            axis.axis('off')
 
     def step(
         self,

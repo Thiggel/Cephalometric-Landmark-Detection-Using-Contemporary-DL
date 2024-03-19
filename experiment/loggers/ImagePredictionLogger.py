@@ -3,8 +3,6 @@ import torch
 from lightning import Callback, Trainer, LightningModule
 import os
 
-from utils.clamp_points import clamp_points
-
 
 class ImagePredictionLogger(Callback):
     def __init__(
@@ -23,29 +21,25 @@ class ImagePredictionLogger(Callback):
         trainer: Trainer,
         pl_module: LightningModule
     ) -> None:
-        images, targets = next(iter(trainer.datamodule.val_dataloader()))
-        num_samples = min(self.num_samples, images.size(0))
-        images = images[:num_samples]
+        val_loader = trainer.datamodule.val_dataloader()
+        val_loader_iter = iter(val_loader)
+        original_batch_size = val_loader.batch_size
 
-        preds = pl_module(images)
+        if original_batch_size == 1:
+            images, targets = [], []
+            for _ in range(self.num_samples):
+                image, target = next(val_loader_iter)
+                images.append(image)
+                targets.append(target)
 
-        preds = clamp_points(preds, images).cpu().numpy()
-        targets = clamp_points(targets, images).cpu().numpy()
+            images = torch.cat(images, dim=0)
+            targets = torch.cat(targets, dim=0)
+        else:
+            images, targets = next(val_loader_iter)
 
-        images = images.permute(0, 2, 3, 1).cpu().numpy()
+        images = images[:self.num_samples]
 
-        fig, axs = plt.subplots(
-            nrows=1,
-            ncols=num_samples,
-            figsize=(20, num_samples * 20)
-        )
-
-        for i, (image, target, pred) in enumerate(zip(images, targets, preds)):
-            axis = axs if num_samples == 1 else axs[i]
-            axis.imshow(image, cmap='gray')
-            axis.scatter(*zip(*target), color='red', s=20)
-            axis.scatter(*zip(*pred), color='blue', s=20)
-            axis.axis('off')
+        pl_module.show_images(images, targets)
 
         plt.tight_layout()
 
@@ -65,4 +59,4 @@ class ImagePredictionLogger(Callback):
             global_step=1
         )
 
-        plt.close(fig)
+        plt.close()

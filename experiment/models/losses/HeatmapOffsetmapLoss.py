@@ -8,8 +8,8 @@ class HeatmapOffsetmapLoss(nn.Module):
     def __init__(
         self,
         resized_image_size: tuple[int, int],
-        heatmap_radius: int = 40,
-        offsetmap_radius: int = 40,
+        heatmap_radius: int = 20,
+        offsetmap_radius: int = 20,
         gaussian: bool = True,
     ):
         super().__init__()
@@ -97,7 +97,8 @@ class HeatmapOffsetmapLoss(nn.Module):
 
             self.general_heatmap[mask] = 1
 
-    def cut_out_rectangles( self,
+    def cut_out_rectangles(
+        self,
         source: torch.Tensor,
         points: torch.Tensor,
         height: int,
@@ -106,13 +107,13 @@ class HeatmapOffsetmapLoss(nn.Module):
         batch_size, num_points, _ = points.size()
         source_height, source_width = source.size()
 
-        x = points[:, :, 0].clamp(0, width - 1)
-        y = points[:, :, 1].clamp(0, height - 1)
+        x = points[:, :, 0].clamp(0, width - 1).round().long()
+        y = points[:, :, 1].clamp(0, height - 1).round().long()
 
-        x_start = (width - x).view(1, -1, 1, 1) \
+        x_start = (width - x).view(batch_size, num_points, 1, 1) \
             .expand(batch_size, num_points, source_height, width)
 
-        y_start = (height - y).view(1, -1, 1, 1) \
+        y_start = (height - y).view(batch_size, num_points, 1, 1) \
             .expand(batch_size, num_points, height, width)
 
         x_indices = x_start + torch.arange(

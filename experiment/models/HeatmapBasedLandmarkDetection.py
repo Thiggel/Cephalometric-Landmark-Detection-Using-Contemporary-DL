@@ -1,11 +1,11 @@
 from __future__ import print_function, division
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torchvision
 import lightning as L
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+from utils.clamp_points import clamp_points
 
 from models.losses.HeatmapOffsetmapLoss import HeatmapOffsetmapLoss
 from models.metrics.MeanRadialError import MeanRadialError
@@ -29,6 +29,7 @@ class HeatmapBasedLandmarkDetection(L.LightningModule):
         super().__init__()
 
         self.model = model
+        self.batch_size = batch_size
 
         self.loss = HeatmapOffsetmapLoss(resized_image_size)
 
@@ -46,11 +47,86 @@ class HeatmapBasedLandmarkDetection(L.LightningModule):
             resized_image_size=resized_image_size,
         )
 
-
     def forward_with_heatmaps(self, x):
         x = x.repeat(1, 3, 1, 1)
         output = self.model(x)
         return output
+
+    def plot_image(
+        self,
+        image: torch.Tensor,
+        num_samples: int,
+        axs: plt.Axes,
+        targets: torch.Tensor,
+        preds: torch.Tensor,
+    ) -> None:
+        axs.imshow(image, cmap='gray')
+        axs.scatter(*zip(*targets), color='red', s=20)
+        axs.scatter(*zip(*preds), color='blue', s=20)
+        axs.axis('off')
+
+    def get_target_heatmaps_for_visualization(
+        self,
+        targets: torch.Tensor,
+        height: int,
+        width: int,
+    ) -> torch.Tensor:
+        return self.loss.cut_out_rectangles(
+            self.loss.general_heatmap,
+            targets,
+            height,
+            width,
+        ).max(dim=1).values
+
+    def show_images(
+        self,
+        images: torch.Tensor,
+        targets: torch.Tensor,
+    ) -> None:
+        feature_maps = (
+            torch.cat([
+                self.forward_with_heatmaps(image)
+                for image in images
+            ], dim=0) if self.batch_size == 1
+            else self.forward_with_heatmaps(images)
+        )
+
+        preds = self.get_points(feature_maps)
+
+        num_points = preds.size(1)
+        heatmaps = feature_maps[:, :num_points].max(dim=1).values
+        _, height, width = heatmaps.size()
+
+        target_heatmaps = self.get_target_heatmaps_for_visualization(
+            targets, height, width
+        )
+
+        preds = clamp_points(preds, images).cpu().numpy()
+        targets = clamp_points(targets, images).cpu().numpy()
+
+        images = images.permute(0, 2, 3, 1).cpu().numpy()
+
+        num_samples = images.shape[0]
+
+        colors = [(1, 1, 1, 0), (1, 1, 0, 1), (1, 0, 0, 1)]
+        heatmap_cmap = LinearSegmentedColormap.from_list("heatmap", colors)
+
+        fig, axs = plt.subplots(2, num_samples, figsize=(20, num_samples * 20))
+
+        for idx, (image, heatmap, target_heatmap, target, pred) in enumerate(
+            zip(images, heatmaps, target_heatmaps, targets, preds)
+        ):
+            first_plot = axs[0, idx] if num_samples > 1 else axs[0]
+            self.plot_image(image, num_samples, first_plot, target, pred)
+            first_plot.imshow(
+                heatmap, alpha=0.5, cmap=heatmap_cmap,
+            )
+
+            second_plot = axs[1, idx] if num_samples > 1 else axs[1]
+            self.plot_image(image, num_samples, second_plot, target, pred)
+            second_plot.imshow(
+                target_heatmap, alpha=0.5, cmap=heatmap_cmap,
+            )
 
     def forward(self, x):
         output = self.forward_with_heatmaps(x)
