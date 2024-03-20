@@ -119,13 +119,13 @@ class HeatmapBasedLandmarkDetection(L.LightningModule):
             first_plot = axs[0, idx] if num_samples > 1 else axs[0]
             self.plot_image(image, num_samples, first_plot, target, pred)
             first_plot.imshow(
-                heatmap, alpha=0.5, cmap=heatmap_cmap,
+                heatmap.detach().cpu(), alpha=0.5, cmap=heatmap_cmap,
             )
 
             second_plot = axs[1, idx] if num_samples > 1 else axs[1]
             self.plot_image(image, num_samples, second_plot, target, pred)
             second_plot.imshow(
-                target_heatmap, alpha=0.5, cmap=heatmap_cmap,
+                target_heatmap.detach().cpu(), alpha=0.5, cmap=heatmap_cmap,
             )
 
     def forward(self, x):

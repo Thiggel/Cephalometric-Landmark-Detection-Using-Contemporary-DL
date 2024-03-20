@@ -25,7 +25,7 @@ class LateralSkullRadiographDataset(Dataset):
             ),
             GaussNoise(var_limit=0.2, mean=0, p=0.5),
         ]),
-        flip_augmentations: bool = True,
+        flip_augmentations: bool = False,
     ):
         self.root_dir = root_dir
         self._get_metadata()

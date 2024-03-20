@@ -47,7 +47,7 @@ class MeanRadialError(nn.Module):
 
         distance *= mask
 
-        return distance
+        return distance.mean(dim=0)
 
     def percent_under_n_mm(
         self,
