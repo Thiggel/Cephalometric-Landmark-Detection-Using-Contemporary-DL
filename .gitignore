@@ -169,3 +169,7 @@ events.out.*
 logs/*
 figure.png
 figure_heatmaps.png
+
+.DS_Store
+__pycache__/
+__MACOSX/
