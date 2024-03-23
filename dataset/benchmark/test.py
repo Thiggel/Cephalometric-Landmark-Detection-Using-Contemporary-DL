@@ -28,6 +28,14 @@ def aggr_points(row):
 
 df = df.apply(aggr_points, axis=1)
 
+df2 = pd.read_csv('../../../dataset2/cepha_val.csv', header=None)
+df2 = df2.apply(aggr_points, axis=1)
+
+df3 = pd.read_csv('../../../dataset2/cepha_test.csv', header=None)
+df3 = df3.apply(aggr_points, axis=1)
+
+df = pd.concat([df, df2, df3])
+
 # only keep the columns document and points
 df = df[['document', 'points']]
 
