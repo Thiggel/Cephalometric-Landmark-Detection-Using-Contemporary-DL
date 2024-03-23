@@ -160,6 +160,8 @@ if __name__ == '__main__':
         training_time = (end_time - start_time) / seconds_to_hours
         results.update({'training_time': training_time})
 
+        print(results)
+
         all_results.append(results)
 
     print_mean_std(all_results)
