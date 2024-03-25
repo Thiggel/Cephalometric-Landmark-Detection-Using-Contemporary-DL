@@ -8,8 +8,8 @@ class HeatmapOffsetmapLoss(nn.Module):
     def __init__(
         self,
         resized_image_size: tuple[int, int],
-        heatmap_radius: int = 20,
-        offsetmap_radius: int = 20,
+        heatmap_radius: int = 40,
+        offsetmap_radius: int = 40,
         gaussian: bool = True,
     ):
         super().__init__()
@@ -82,6 +82,15 @@ class HeatmapOffsetmapLoss(nn.Module):
                 -0.5 * ((y_grid - height) ** 2 + (x_grid - width) ** 2)
                 / (heatmap_radius ** 2)
             )
+
+            distance = (
+                (y_grid - height) ** 2 +
+                (x_grid - width) ** 2
+            ).sqrt()
+
+            mask = distance <= heatmap_radius
+
+            self.general_heatmap = self.general_heatmap * mask
         else:
             self.general_heatmap = torch.zeros(
                 (height * 2, width * 2),
@@ -144,6 +153,17 @@ class HeatmapOffsetmapLoss(nn.Module):
 
         return landmarks
 
+    def mask_tensors(
+        self,
+        predictions: torch.Tensor,
+        targets: torch.Tensor,
+        mask: torch.Tensor,
+    ) -> torch.Tensor:
+        return (
+            predictions * mask,
+            targets * mask,
+        )
+
     def forward(
         self,
         feature_maps: torch.Tensor, 
@@ -175,27 +195,46 @@ class HeatmapOffsetmapLoss(nn.Module):
             width,
         )
 
-        heatmap_loss = F.binary_cross_entropy_with_logits(
+        mask = (landmarks > 0).prod(-1) \
+            .view(batch_size, num_points, 1, 1) \
+            .expand(batch_size, num_points, height, width)
+
+        predicted_heatmaps, heatmaps = self.mask_tensors(
             feature_maps[:, :num_points],
             heatmaps,
-            reduction="none",
-        ).mean(dim=(2, 3))
+            mask,
+        )
 
-        offsetmap_x_loss = F.l1_loss(
+        predicted_offsetmap_x, offsetmap_x = self.mask_tensors(
             feature_maps[:, num_points:num_points * 2],
             offsetmap_x,
-            reduction="none",
-        ).mean(dim=(2, 3))
+            mask,
+        )
 
-        offsetmap_y_loss = F.l1_loss(
+        predicted_offsetmap_y, offsetmap_y = self.mask_tensors(
             feature_maps[:, num_points * 2:],
             offsetmap_y,
-            reduction="none",
-        ).mean(dim=(2, 3))
+            mask,
+        )
+
+        heatmap_loss = F.binary_cross_entropy_with_logits(
+            predicted_heatmaps,
+            heatmaps,
+        )
+
+        indices = heatmaps > 0
+
+        offsetmap_x_loss = F.l1_loss(
+            predicted_offsetmap_x[indices],
+            offsetmap_x[indices],
+        )
+
+        offsetmap_y_loss = F.l1_loss(
+            predicted_offsetmap_y[indices],
+            offsetmap_y[indices],
+        )
+        
         
         loss = 2 * heatmap_loss + offsetmap_x_loss + offsetmap_y_loss
-
-        mask = (landmarks > 0).prod(-1)
-        loss = (loss * mask).sum() / mask.sum()
 
         return loss

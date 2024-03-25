@@ -29,12 +29,12 @@ model = HeatmapBasedLandmarkDetection(
         data_module.dataset.num_points,
         resized_image_size,
     ),
-)
+).cuda()
 
 model.load_state_dict(
     torch.load(
         '../checkpoints/Chen-epoch=56-val_loss=0.15.ckpt',
-    ),
+    )['state_dict'],
 )
 
 mre = MeanRadialError(
@@ -47,15 +47,15 @@ for i in range(20):
     predictions = model(image)
     distance = mre(predictions, targets)
 
-    plt.imshow(image[0].permute(1, 2, 0))
-    plt.scatter(targets[0, :, 0], targets[0, :, 1], c='r')
-    plt.scatter(predictions[0, :, 0], predictions[0, :, 1], c='b')
+    plt.imshow(image[0].cpu().permute(1, 2, 0))
+    plt.scatter(targets[0, :, 0].cpu(), targets[0, :, 1].cpu(), c='r')
+    plt.scatter(predictions[0, :, 0].cpu(), predictions[0, :, 1].cpu(), c='b')
 
     for j in range(targets.shape[1]):
-        plt.plot([targets[0, j, 0], predictions[0, j, 0]], [targets[0, j, 1], predictions[0, j, 1]], c='g', linestyle='--')
-        distance_text = f'{distance[j]:.2f}'
-        plt.text((targets[0, j, 0] + predictions[0, j, 0]) / 2, 
-                 (targets[0, j, 1] + predictions[0, j, 1]) / 2, 
+        plt.plot([targets[0, j, 0].cpu(), predictions[0, j, 0].cpu()], [targets[0, j, 1].cpu(), predictions[0, j, 1].cpu()], c='g', linestyle='--')
+        distance_text = f'{distance[j].cpu():.2f}'
+        plt.text((targets[0, j, 0].cpu() + predictions[0, j, 0].cpu()) / 2, 
+                 (targets[0, j, 1].cpu() + predictions[0, j, 1].cpu()) / 2, 
                  distance_text, 
                  horizontalalignment='center', 
                  verticalalignment='center',

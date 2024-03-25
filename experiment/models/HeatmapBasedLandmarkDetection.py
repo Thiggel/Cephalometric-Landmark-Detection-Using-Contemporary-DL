@@ -6,6 +6,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from utils.clamp_points import clamp_points
+import numpy as np
 
 from models.losses.HeatmapOffsetmapLoss import HeatmapOffsetmapLoss
 from models.metrics.MeanRadialError import MeanRadialError
@@ -132,6 +133,45 @@ class HeatmapBasedLandmarkDetection(L.LightningModule):
         output = self.forward_with_heatmaps(x)
 
         return self.get_points(output)
+    
+    def regression_voting(self, heatmaps, R):
+        # print("11", time.asctime())
+        topN = int(R * R * 3.1415926)
+        heatmap = heatmaps
+        imageNum, featureNum, h, w = heatmap.size()
+        landmarkNum = int(featureNum / 3)
+        heatmap = heatmap.contiguous().view(imageNum, featureNum, -1)
+
+        predicted_landmarks = torch.zeros((imageNum, landmarkNum, 2), device=self.device)
+        Pmap = heatmap[:, 0:landmarkNum, :].data
+        Xmap = torch.round(heatmap[:, landmarkNum : landmarkNum * 2, :].data * R).long() * w
+        Ymap = torch.round(heatmap[:, landmarkNum * 2 : landmarkNum * 3, :].data * R).long()
+        topkP, indexs = torch.topk(Pmap, topN)
+        # ~ plt.imshow(Pmap.reshape(imageNum, landmarkNum, h,w)[0][0], cmap='gray', interpolation='nearest')
+        for imageId in range(imageNum):
+            for landmarkId in range(landmarkNum):
+
+                topnXoff = Xmap[imageId][landmarkId][
+                    indexs[imageId][landmarkId]
+                ]  # offset in x direction
+                topnYoff = Ymap[imageId][landmarkId][
+                    indexs[imageId][landmarkId]
+                ]  # offset in y direction
+                VotePosi = (
+                    (topnXoff + topnYoff + indexs[imageId][landmarkId])
+                    .cpu()
+                    .numpy()
+                    .astype("int")
+                )
+                tem = VotePosi[VotePosi >= 0]
+                maxid = 0
+                if len(tem) > 0:
+                    maxid = np.argmax(np.bincount(tem))
+                x = maxid // w
+                y = maxid - x * w
+                x, y = x / (h - 1), y / (w - 1)
+                predicted_landmarks[imageId][landmarkId] = torch.tensor([x, y], device=self.device)
+        return predicted_landmarks
 
     def get_points(self, model_output: torch.Tensor):
         num_points = model_output.size(1) // 3
