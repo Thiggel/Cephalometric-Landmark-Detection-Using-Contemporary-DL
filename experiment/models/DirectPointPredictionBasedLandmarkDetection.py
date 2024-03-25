@@ -17,6 +17,7 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
         model: nn.Module,
         point_ids: list[str],
         original_image_size_mm: tuple[float, float],
+        original_image_size: tuple[int, int],
         resized_image_size: int = (224, 224),
         reduce_lr_patience: int = 25,
         optimizer: str = 'sgd_momentum',

@@ -98,6 +98,16 @@ def run(args: dict, seed: int = 42) -> dict:
         model_name=args.model_name,
     )
 
+    if args.checkpoint is not None:
+        model.load_state_dict(
+            torch.load(
+                args.checkpoint,
+                map_location=torch.device(
+                    'cuda' if torch.cuda.is_available() else 'cpu'
+                )
+            )['state_dict']
+        )
+
     stats_monitor = DeviceStatsMonitor()
 
     callbacks = [
@@ -116,10 +126,6 @@ def run(args: dict, seed: int = 42) -> dict:
         'accelerator': 'gpu' if torch.cuda.is_available() else 'cpu',
         'devices': 'auto',
     }
-
-    if args.checkpoint is not None:
-        trainer_args['resume_from_checkpoint'] = args.checkpoint
-
 
     trainer = L.Trainer(
         **trainer_args

@@ -6,6 +6,8 @@ from models.HeatmapBasedLandmarkDetection import HeatmapBasedLandmarkDetection
 from models.baselines.chen import fusionVGG19
 from models.metrics.MeanRadialError import MeanRadialError
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 batch_size = 1
 resized_image_size = (800, 640)
 
@@ -14,9 +16,11 @@ data_module = LateralSkullRadiographDataModule(
     root_dir='../dataset/benchmark',
     csv_file='points.csv',
     resized_image_size=resized_image_size,
+    flip_augmentations=False,
 )
 
-original_image_size_mm = data_module.dataset.original_image_size
+original_image_size_mm = data_module.dataset.original_image_size_mm
+original_image_size = data_module.dataset.original_image_size
 
 model = HeatmapBasedLandmarkDetection(
     original_image_size_mm=original_image_size_mm,
@@ -29,11 +33,12 @@ model = HeatmapBasedLandmarkDetection(
         data_module.dataset.num_points,
         resized_image_size,
     ),
-).cuda()
+).to(device)
 
 model.load_state_dict(
     torch.load(
         '../checkpoints/Chen-epoch=56-val_loss=0.15.ckpt',
+        map_location=device,
     )['state_dict'],
 )
 
@@ -43,6 +48,7 @@ mre = MeanRadialError(
 )
 
 for i in range(20):
+    plt.figure(figsize=(30, 24))
     image, targets = next(iter(data_module.train_dataloader()))
     predictions = model(image)
     distance = mre(predictions, targets)
@@ -62,3 +68,4 @@ for i in range(20):
                  fontsize=8, color='black')
     
     plt.savefig(f'../test_images/check_distances_{i}.png')
+    plt.close()

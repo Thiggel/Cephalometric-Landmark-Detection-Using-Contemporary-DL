@@ -14,6 +14,7 @@ class LateralSkullRadiographDataModule(L.LightningDataModule):
         transform: Callable = None,
         splits: tuple[int, int, int] = (0.8, 0.1, 0.1),
         batch_size: int = 32,
+        flip_augmentations: bool = False,
     ):
         super().__init__()
 
@@ -22,6 +23,7 @@ class LateralSkullRadiographDataModule(L.LightningDataModule):
             csv_file=csv_file,
             transform=transform,
             resized_image_size=resized_image_size,
+            flip_augmentations=flip_augmentations,
         )
 
         self.train_dataset, self.val_dataset, self.test_dataset = random_split(

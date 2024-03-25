@@ -14,24 +14,10 @@ class MeanRadialError(nn.Module):
             "cuda" if torch.cuda.is_available() else "cpu"
         )
 
-        self.resized_image_size = resized_image_size
-        self.original_image_size_mm = original_image_size_mm
-
-        self.init_ratios()
-
-    def init_ratios(self):
-        height, width = self.resized_image_size
-        height_mm, width_mm = self.original_image_size_mm
-
-        self.height_ratio = height_mm / height
-        self.width_ratio = width_mm / width
-
-    def px_to_mm(self, px: torch.Tensor) -> torch.Tensor:
-
-        px[:, 0] *= self.height_ratio
-        px[:, 1] *= self.width_ratio
-
-        return px
+        self.resized_image_size = torch.tensor(resized_image_size).to(self.device) \
+            .view(1, 1, -1).float()
+        self.original_image_size_mm = torch.tensor(original_image_size_mm) \
+            .to(self.device).view(1, 1, -1).float()
 
     def forward(
         self,
@@ -39,7 +25,8 @@ class MeanRadialError(nn.Module):
         ground_truth_points: torch.Tensor,
     ) -> torch.Tensor:
         difference = predicted_points - ground_truth_points
-        difference_mm = self.px_to_mm(difference)
+        diff_btwn_zero_one = difference / self.resized_image_size.flip(-1)
+        difference_mm = diff_btwn_zero_one * self.original_image_size_mm.flip(-1)
 
         distance = (difference_mm ** 2).sum(dim=-1).sqrt()
 
