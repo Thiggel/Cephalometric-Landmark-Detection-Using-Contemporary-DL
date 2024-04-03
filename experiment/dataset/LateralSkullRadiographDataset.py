@@ -133,14 +133,6 @@ class LateralSkullRadiographDataset(Dataset):
             torch.stack(points),
         )
 
-    def _normalize(self, images: torch.Tensor) -> torch.Tensor:
-        normalize = transforms.Normalize(
-            mean=images.mean(),
-            std=images.std(),
-        )
-
-        return normalize(images)
-
     def _load_data(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         point_ids = self._load_point_ids()
 
@@ -155,7 +147,8 @@ class LateralSkullRadiographDataset(Dataset):
 
             self._save_to_pickle(images, points)
 
-        images = self._normalize(images)
+        print(images.min(), images.max())
+        exit()
 
         return images, points, point_ids
 
