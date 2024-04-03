@@ -248,10 +248,8 @@ class HeatmapBasedLandmarkDetection(L.LightningModule):
         for (id, point_id) in enumerate(self.point_ids):
             self.log(f'{point_id}_mm_error', mm_error[id].mean())
 
-        mm_error = mm_error.mean()
-
         self.log('test_loss', loss, prog_bar=True)
-        self.log('test_mm_error', mm_error, prog_bar=True)
+        self.log('test_mm_error', mm_error.mean(), prog_bar=True)
 
         self.log(
             'percent_under_1mm',
