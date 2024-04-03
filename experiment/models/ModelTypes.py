@@ -48,7 +48,7 @@ class ModelTypes(Enum):
                 resized_image_size=(512, 512),
                 model=lambda output_size, *args, **kwargs: HeatmapBasedLandmarkDetection(
                     model=Segformer(
-                        model_name='nvidia/segformer-b2-finetuned-ade-512-512',
+                        model_name='nvidia/segformer-b4-finetuned-ade-512-512',
                         output_size=output_size,
                     ),
                     *args, **kwargs,
@@ -56,7 +56,7 @@ class ModelTypes(Enum):
             ),
             'SegformerLarge': ModelType(
                 resized_image_size=(640, 640),
-                model=lambda output_size, *args, **kwargs: HeatmapBasedLandmarkPrediction(
+                model=lambda output_size, *args, **kwargs: HeatmapBasedLandmarkDetection(
                     model=Segformer(
                         model_name='nvidia/segformer-b5-finetuned-ade-640-640',
                         output_size=output_size,

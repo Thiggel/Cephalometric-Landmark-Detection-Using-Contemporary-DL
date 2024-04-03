@@ -147,9 +147,6 @@ class LateralSkullRadiographDataset(Dataset):
 
             self._save_to_pickle(images, points)
 
-        print(images.min(), images.max())
-        exit()
-
         return images, points, point_ids
 
     def _load_point_ids(self) -> list[str]:

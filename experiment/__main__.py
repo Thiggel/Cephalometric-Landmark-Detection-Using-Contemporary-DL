@@ -162,7 +162,7 @@ if __name__ == '__main__':
         results = run(args, seed=run_idx)[0]
 
         end_time = time.time()
-        seconds_to_hours = 1 / 60 / 60
+        seconds_to_hours = 3600
         training_time = (end_time - start_time) / seconds_to_hours
         results.update({'training_time': training_time})
 

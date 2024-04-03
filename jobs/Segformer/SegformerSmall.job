@@ -17,4 +17,4 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
 cd $HOME/Cephalometry
 conda activate cephalometry
 pip install -r requirements.txt
-python experiment --model_name SegformerSmall --num_runs 3
+python experiment --model_name SegformerSmall --num_runs 3 --batch_size 4

@@ -180,7 +180,7 @@ class HeatmapOffsetmapLoss(nn.Module):
             height,
             width,
         )
-
+        
         offsetmap_x = self.cut_out_rectangles(
             self.general_offsetmap_x,
             landmarks,
@@ -198,6 +198,7 @@ class HeatmapOffsetmapLoss(nn.Module):
         mask = (landmarks > 0).prod(-1) \
             .view(batch_size, num_points, 1, 1) \
             .expand(batch_size, num_points, height, width)
+
 
         predicted_heatmaps, heatmaps = self.mask_tensors(
             feature_maps[:, :num_points],
@@ -233,8 +234,7 @@ class HeatmapOffsetmapLoss(nn.Module):
             predicted_offsetmap_y[indices],
             offsetmap_y[indices],
         )
-        
-        
+
         loss = 2 * heatmap_loss + offsetmap_x_loss + offsetmap_y_loss
 
         return loss
