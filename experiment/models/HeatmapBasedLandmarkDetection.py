@@ -132,7 +132,7 @@ class HeatmapBasedLandmarkDetection(L.LightningModule):
         output = self.forward_with_heatmaps(x)
 
         return self.get_points(output)
-    
+
     def regression_voting(self, heatmaps, R):
         topN = int(R * R * 3.1415926)
         heatmap = heatmaps

@@ -43,7 +43,7 @@ class MeanRadialError(nn.Module):
         n_mm: int
     ) -> torch.Tensor:
         mask = (targets > 0).prod(-1)
-        under_n_mm = (unreduced_mre < n_mm).sum().float()
+        under_n_mm = (unreduced_mre <= n_mm).sum().float()
         total = mask.sum().float()
 
         return under_n_mm / total
