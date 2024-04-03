@@ -94,7 +94,7 @@ class LateralSkullRadiographDataset(Dataset):
         if not os.path.exists(img_name):
             img_name += '.jpg'
 
-        image = Image.open(img_name).convert('L')
+        image = Image.open(img_name).convert('RGB')
 
         image = self.to_tensor(image)
 

@@ -49,7 +49,6 @@ class HeatmapBasedLandmarkDetection(L.LightningModule):
         )
 
     def forward_with_heatmaps(self, x):
-        x = x.repeat(1, 3, 1, 1)
         output = self.model(x)
         return output
 
@@ -86,7 +85,7 @@ class HeatmapBasedLandmarkDetection(L.LightningModule):
     ) -> None:
         feature_maps = (
             torch.cat([
-                self.forward_with_heatmaps(image)
+                self.forward_with_heatmaps(image.unsqueeze(0))
                 for image in images
             ], dim=0) if self.batch_size == 1
             else self.forward_with_heatmaps(images)
@@ -135,7 +134,6 @@ class HeatmapBasedLandmarkDetection(L.LightningModule):
         return self.get_points(output)
     
     def regression_voting(self, heatmaps, R):
-        # print("11", time.asctime())
         topN = int(R * R * 3.1415926)
         heatmap = heatmaps
         imageNum, featureNum, h, w = heatmap.size()
@@ -147,37 +145,39 @@ class HeatmapBasedLandmarkDetection(L.LightningModule):
         Xmap = torch.round(heatmap[:, landmarkNum : landmarkNum * 2, :].data * R).long() * w
         Ymap = torch.round(heatmap[:, landmarkNum * 2 : landmarkNum * 3, :].data * R).long()
         topkP, indexs = torch.topk(Pmap, topN)
-        # ~ plt.imshow(Pmap.reshape(imageNum, landmarkNum, h,w)[0][0], cmap='gray', interpolation='nearest')
+
         for imageId in range(imageNum):
             for landmarkId in range(landmarkNum):
 
                 topnXoff = Xmap[imageId][landmarkId][
                     indexs[imageId][landmarkId]
                 ]  # offset in x direction
+
                 topnYoff = Ymap[imageId][landmarkId][
                     indexs[imageId][landmarkId]
                 ]  # offset in y direction
+
                 VotePosi = (
                     (topnXoff + topnYoff + indexs[imageId][landmarkId])
                     .cpu()
                     .numpy()
                     .astype("int")
                 )
+
                 tem = VotePosi[VotePosi >= 0]
                 maxid = 0
+
                 if len(tem) > 0:
                     maxid = np.argmax(np.bincount(tem))
+
                 x = maxid // w
                 y = maxid - x * w
-                x, y = x / (h - 1), y / (w - 1)
-                predicted_landmarks[imageId][landmarkId] = torch.tensor([x, y], device=self.device)
+                #x, y = x / (h - 1), y / (w - 1)
+                predicted_landmarks[imageId][landmarkId] = torch.tensor([y, x], device=self.device)
         return predicted_landmarks
 
     def get_points(self, model_output: torch.Tensor):
-        num_points = model_output.size(1) // 3
-        return self.heatmap_helper.get_highest_points(
-            model_output[:, :num_points]
-        )
+        return self.regression_voting(model_output, 40)
 
     def step(
         self,
