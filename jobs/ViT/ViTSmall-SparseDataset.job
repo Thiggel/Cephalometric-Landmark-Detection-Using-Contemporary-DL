@@ -17,4 +17,4 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
 cd $HOME/Cephalometry
 conda activate cephalometry
 pip install -r requirements.txt
-python experiment --model_name ViTSmall --num_runs 3 --csv_file all_images_44_points_sparse.csv
+python experiment --model_name ViTSmall --num_runs 3 --csv_file all_images_44_points_sparse.csv --flip_augmentations

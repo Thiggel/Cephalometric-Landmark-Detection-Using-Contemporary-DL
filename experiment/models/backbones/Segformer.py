@@ -21,7 +21,6 @@ class Segformer(nn.Module):
                 in_channels=self.config.decoder_hidden_size,
                 out_channels=output_size * 3,
                 kernel_size=1,
-                stride=1,
             ),
         )
 

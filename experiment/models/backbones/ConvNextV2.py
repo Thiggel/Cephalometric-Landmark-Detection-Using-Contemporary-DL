@@ -14,7 +14,7 @@ class ConvNextV2(nn.Module):
     ):
         super().__init__()
 
-        self.model = self._load_model(model_type)
+        self.model = self._load_model(model_name)
 
         self.head = nn.Linear(
             self.model.config.hidden_sizes[-1],
@@ -27,17 +27,7 @@ class ConvNextV2(nn.Module):
         output = self.model(images).pooler_output
         return self.head(output).reshape(-1, self.output_size, 2)
 
-    def _load_model(self, model_type: str) -> Callable:
-        models = {
-            'tiny': 'facebook/convnextv2-atto-1k-224',
-            'normal': 'facebook/convnextv2-huge-1k-224',
-        }
-
-        if model_type not in models:
-            raise ValueError(
-                f"model_type must be one of {list(models.keys())}"
-            )
-
-        model = ConvNextV2Model.from_pretrained(models[model_type])
+    def _load_model(self, model_name: str) -> Callable:
+        model = ConvNextV2Model.from_pretrained(model_name)
 
         return model

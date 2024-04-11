@@ -92,7 +92,11 @@ class LateralSkullRadiographDataset(Dataset):
         )
 
         if not os.path.exists(img_name):
-            img_name += '.jpg'
+            if os.path.exists(img_name + '.jpg'):
+                img_name += '.jpg'
+
+            if os.path.exists(img_name + '.png'):
+                img_name += '.png'
 
         image = Image.open(img_name).convert('RGB')
 

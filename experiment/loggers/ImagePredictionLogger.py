@@ -9,12 +9,14 @@ class ImagePredictionLogger(Callback):
         self,
         num_samples: int,
         resized_image_size: tuple[int, int],
-        model_name: str
+        model_name: str,
+        dataset_name: str,
     ):
         super().__init__()
         self.num_samples = num_samples
         self.resized_image_size = resized_image_size
         self.module_name = model_name
+        self.dataset_name = dataset_name
 
     def on_validation_epoch_start(
         self,
@@ -49,14 +51,17 @@ class ImagePredictionLogger(Callback):
         path = f'figures/figure_{self.module_name}.png'
         plt.savefig(path, bbox_inches='tight')
 
-        image = torch.from_numpy(
-            plt.imread(path)
-        ).permute(2, 0, 1)
+        try:
+            image = torch.from_numpy(
+                plt.imread(path)
+            ).permute(2, 0, 1)
 
-        trainer.logger.experiment.add_image(
-            'predictions_vs_targets',
-            image,
-            global_step=1
-        )
+            trainer.logger.experiment.add_image(
+                'predictions_vs_targets',
+                image,
+                global_step=1
+            )
+        except Exception as e:
+            print(f'Error: {e}')
 
         plt.close()

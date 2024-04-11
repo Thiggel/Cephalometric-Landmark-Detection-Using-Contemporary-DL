@@ -7,7 +7,7 @@ from models.DirectPointPredictionBasedLandmarkDetection import \
     DirectPointPredictionBasedLandmarkDetection
 from models.HeatmapBasedLandmarkDetection import \
     HeatmapBasedLandmarkDetection
-from models.baselines.chen import fusionVGG19
+from models.baselines.chen import fusionVGG19, ChenConvNext
 from models.backbones.ViT import ViT
 from models.backbones.ConvNextV2 import ConvNextV2
 from models.backbones.Segformer import Segformer
@@ -37,6 +37,26 @@ class ModelTypes(Enum):
                 : HeatmapBasedLandmarkDetection(
                     model=fusionVGG19(
                         torchvision.models.vgg19_bn(pretrained=True),
+                        batch_size,
+                        output_size,
+                        resized_image_size,
+                    ),
+                    *args, **kwargs,
+                ),
+            ),
+            'ChenConvNext': ModelType(
+                resized_image_size=(800, 640),
+                model=lambda \
+                    batch_size, \
+                    output_size, \
+                    resized_image_size, \
+                    *args, \
+                    **kwargs \
+                : HeatmapBasedLandmarkDetection(
+                    model=ChenConvNext(
+                        ConvNextV2(
+                            model_name='facebook/convnextv2-base-22k-224',
+                        ),
                         batch_size,
                         output_size,
                         resized_image_size,

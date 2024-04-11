@@ -395,3 +395,128 @@ class fusionVGG19(nn.Module):
         # coordinateMean1, coordinateMean2, coordinateDev = self.getCoordinate(y)
 
         return y
+
+class ChenConvNext(nn.Module):
+    def __init__(
+        self,
+        model, 
+        batch_size,
+        num_points,
+        resized_image_size,
+    ):
+        super().__init__()
+
+        self.model = model.model
+
+        self.relu = nn.ReLU(inplace=True)
+
+        fnum = 64
+        self.fnum = fnum
+        self.f_conv4 = nn.Sequential(
+            nn.Conv2d(1024, fnum, kernel_size=(1, 1), stride=1, padding=0),
+            nn.BatchNorm2d(fnum, track_running_stats=False),
+            nn.ReLU(True),
+        )
+
+        self.f_conv3 = nn.Sequential(
+            nn.Conv2d(512, fnum, kernel_size=(1, 1), stride=1, padding=0),
+            nn.BatchNorm2d(fnum, track_running_stats=False),
+            nn.ReLU(True),
+        )
+
+        self.f_conv2 = nn.Sequential(
+            nn.Conv2d(256, fnum, kernel_size=(1, 1), stride=1, padding=0),
+            nn.BatchNorm2d(fnum, track_running_stats=False),
+            nn.ReLU(True),
+        )
+
+        self.f_conv1 = nn.Sequential(
+            nn.Conv2d(128, fnum, kernel_size=(1, 1), stride=1, padding=0),
+            nn.BatchNorm2d(fnum, track_running_stats=False),
+            nn.ReLU(True),
+        )
+
+        self.avgPool8t = nn.AvgPool2d(8, 8)
+        self.avgPool4t = nn.AvgPool2d(4, 4)
+        self.avgPool2t = nn.AvgPool2d(2, 2)
+        self.attentionLayer1 = nn.Sequential(
+            nn.Linear(500, 128, bias=False),
+            nn.BatchNorm1d(1, track_running_stats=False),
+            nn.Tanh(),
+            nn.Linear(128, num_points * 3, bias=False),
+            nn.Softmax(dim=0),
+        )
+
+        moduleList = []
+        for i in range(num_points * 3):
+            temConv = nn.Conv2d(fnum * 4, 1, kernel_size=(1, 1), stride=1, padding=0)
+            moduleList.append(temConv)
+
+        self.moduleList = nn.ModuleList(moduleList)
+        self.dilated_block = dilationInceptionModule(fnum * 4, fnum * 4)
+        self.prediction = nn.Conv2d(
+            fnum * 4, num_points * 3, kernel_size=(1, 1), stride=1, padding=0
+        )
+        self.Upsample2 = nn.Upsample(scale_factor=2, mode="bilinear")
+        self.Upsample4 = nn.Upsample(scale_factor=4, mode="bilinear")
+        self.Upsample8 = nn.Upsample(scale_factor=8, mode="bilinear")
+        self.Upsample16 = nn.Upsample(scale_factor=16, mode="bilinear")
+        self.Upsample32 = nn.Upsample(scale_factor=32, mode="bilinear")
+
+        self.landmarksNum = num_points
+        self.batchSize = batch_size
+        self.R2 = 40
+
+        self.height, self.width = resized_image_size
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    def getAttention(self, bone, fnum):
+        bone = self.avgPool8t(bone).view(fnum, -1)
+        bone = bone.unsqueeze(1)
+        y = self.attentionLayer1(bone).squeeze(1).transpose(1, 0)
+        return y
+
+    def predictionWithAttention(self, bone, attentions):
+        featureNum, channelNum = attentions.size()[0], attentions.size()[1]
+
+        attentionMaps = []
+        for i in range(featureNum):
+            attention = attentions[i, :]
+            attention = attention.view(1, channelNum, 1, 1)
+            attentionMap = attention * bone * channelNum
+            attentionMaps.append(self.moduleList[i](attentionMap))
+
+        attentionMaps = torch.stack(attentionMaps).squeeze().unsqueeze(0)
+        return attentionMaps
+
+    def forward(self, x):
+        x = self.model.embeddings(x)
+
+        x = self.model.encoder.stages[0](x)
+        f1 = self.f_conv1(x)
+
+        x = self.model.encoder.stages[1](x)
+        f2 = self.f_conv2(x)
+
+        x = self.model.encoder.stages[2](x)
+        f3 = self.f_conv3(x)
+
+        x = self.model.encoder.stages[3](x)
+        f4 = self.f_conv4(x)
+
+        f2 = self.Upsample2(f2)
+        f3 = self.Upsample4(f3)
+        f4 = self.Upsample8(f4)
+
+        bone = torch.cat((f1, f2, f3, f4), 1)
+
+        # Attentive Feature Pyramid Fusion
+        bone = self.dilated_block(bone)
+        attention = self.getAttention(bone, self.fnum * 4)
+        y = self.Upsample4(self.predictionWithAttention(bone, attention))
+
+        # predicting landmarks with the integral operation
+        # coordinateMean1, coordinateMean2, coordinateDev = self.getCoordinate(y)
+
+        return y

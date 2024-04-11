@@ -5,7 +5,7 @@
 #SBATCH --job-name=Chen-BenchmarkDataset
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=18
-#SBATCH --time=16:00:00
+#SBATCH --time=12:30:00
 #SBATCH --output=job_logs/Chen-BenchmarkDataset.out
 
 module purge
@@ -17,4 +17,4 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
 cd $HOME/Cephalometry
 conda activate cephalometry
 pip install -r requirements.txt
-python experiment --model_name Chen --batch_size 1 --num_runs 3 --root_dir dataset/benchmark --csv_file points.csv
+python experiment --model_name Chen --batch_size 1 --num_runs 3 --max_hours_per_run 3 --root_dir dataset/benchmark --csv_file points.csv

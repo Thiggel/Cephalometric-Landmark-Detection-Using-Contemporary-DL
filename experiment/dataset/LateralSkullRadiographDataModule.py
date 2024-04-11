@@ -14,7 +14,7 @@ class LateralSkullRadiographDataModule(L.LightningDataModule):
         transform: Callable = None,
         splits: tuple[int, int, int] = (0.8, 0.1, 0.1),
         batch_size: int = 32,
-        flip_augmentations: bool = False,
+        flip_augmentations: bool = True,
     ):
         super().__init__()
 

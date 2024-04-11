@@ -36,8 +36,12 @@ def get_args() -> dict:
     parser.add_argument('--early_stopping_patience', type=int, default=100)
     parser.add_argument('--checkpoint', type=str, default=None)
     parser.add_argument('--test_only', action=argparse.BooleanOptionalAction)
+    parser.add_argument('--flip_augmentations', action=argparse.BooleanOptionalAction)
     parser.add_argument('--num_runs', type=int, default=1)
     parser.add_argument('--max_hours_per_run', type=int, default=5)
+    parser.add_argument('--logger', action='store_true')
+    parser.add_argument('--no-logger', action='store_false', dest='logger')
+    parser.set_defaults(logger=True)
 
     args = parser.parse_args()
 
@@ -61,6 +65,7 @@ def run(args: dict, seed: int = 42) -> dict:
         splits=args.splits,
         batch_size=args.batch_size,
         resized_image_size=model_type.resized_image_size,
+        flip_augmentations=args.flip_augmentations,
     )
 
     model_args = {
@@ -77,7 +82,7 @@ def run(args: dict, seed: int = 42) -> dict:
 
     checkpoint_callback = ModelCheckpoint(
         dirpath='checkpoints/',
-        filename=args.model_name + '-{epoch}-{val_loss:.2f}',
+        filename=args.model_name + ' ' + args.csv_file + '-{epoch}-{val_loss:.2f}',
         monitor='val_loss',
     )
 
@@ -89,13 +94,14 @@ def run(args: dict, seed: int = 42) -> dict:
 
     tensorboard_logger = TensorBoardLogger(
         'logs/',
-        name=args.model_name + ' ' + date.today().isoformat(),
+        name=args.model_name + ' ' + args.csv_file
     )
 
     image_logger = ImagePredictionLogger(
         num_samples=5,
         resized_image_size=model_type.resized_image_size,
         model_name=args.model_name,
+        dataset_name=args.csv_file,
     )
 
     if args.checkpoint is not None:
@@ -122,7 +128,7 @@ def run(args: dict, seed: int = 42) -> dict:
         'max_epochs': 10_000,
         'callbacks': callbacks,
         'enable_checkpointing': True,
-        'logger': tensorboard_logger,
+        'logger': tensorboard_logger if args.logger else None,
         'accelerator': 'gpu' if torch.cuda.is_available() else 'cpu',
         'devices': 'auto',
     }
