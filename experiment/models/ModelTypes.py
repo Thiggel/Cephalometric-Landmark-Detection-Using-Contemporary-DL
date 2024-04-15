@@ -114,9 +114,10 @@ class ModelTypes(Enum):
             ),
             'ConvNextSmall': ModelType(
                 resized_image_size=(224, 224),
-                model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
+                model=lambda output_size, *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
                     model=ConvNextV2(
                         model_name='facebook/convnextv2-tiny-22k-224',
+                        output_size=output_size,
                     ),
                     *args, **kwargs,
                 ),
