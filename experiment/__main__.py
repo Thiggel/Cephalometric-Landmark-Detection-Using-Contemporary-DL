@@ -16,6 +16,7 @@ from loggers.ImagePredictionLogger import ImagePredictionLogger
 from dataset.LateralSkullRadiographDataModule import \
     LateralSkullRadiographDataModule
 from models.ModelTypes import ModelTypes
+from argparse import Namespace
 
 mp.set_start_method('spawn')
 
@@ -34,7 +35,7 @@ def get_args() -> dict:
     parser.add_argument('--splits', type=tuple, default=(0.8, 0.1, 0.1))
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--early_stopping_patience', type=int, default=100)
-    parser.add_argument('--checkpoint', type=str, default=None)
+    parser.add_argument("--checkpoint", nargs="+", type=str, default=None)
     parser.add_argument('--test_only', action=argparse.BooleanOptionalAction)
     parser.add_argument('--flip_augmentations', action=argparse.BooleanOptionalAction)
     parser.add_argument('--num_runs', type=int, default=1)
@@ -157,6 +158,15 @@ def print_mean_std(results: list[dict]) -> None:
         print(f'{key} - Mean: {m.item()}, Std: {s.item()}')
 
 
+def set_checkpoint_for_run(args: Namespace, run_idx: int) -> str:
+    if not hasattr(args, 'checkpoint_list') or args.checkpoint_list is None:
+        args.checkpoint_list = args.checkpoint
+
+    args.checkpoint = args.checkpoint_list[run_idx % len(args.checkpoint_list)]
+
+    return args
+
+
 if __name__ == '__main__':
     args = get_args()
 
@@ -165,7 +175,9 @@ if __name__ == '__main__':
     for run_idx in range(args.num_runs):
         start_time = time.time()
 
-        results = run(args, seed=run_idx)[0]
+        run_args = set_checkpoint_for_run(args, run_idx)
+
+        results = run(run_args, seed=run_idx)[0]
 
         end_time = time.time()
         seconds_to_hours = 3600

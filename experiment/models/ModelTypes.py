@@ -105,8 +105,9 @@ class ModelTypes(Enum):
             ),
             'ViTLargeImageSize': ModelType(
                 resized_image_size=(384, 384),
-                model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
+                model=lambda output_size, *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
                     model=ViT(
+                        output_size=output_size,
                         model_name='google/vit-base-patch16-384'
                     ),
                     *args, **kwargs,
@@ -133,8 +134,9 @@ class ModelTypes(Enum):
             ),
             'ConvNextLargeImageSize': ModelType(
                 resized_image_size=(384, 384),
-                model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
+                model=lambda output_size, *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
                     model=ConvNextV2(
+                        output_size=output_size,
                         model_name='facebook/convnextv2-tiny-22k-384',
                     ),
                     *args, **kwargs,

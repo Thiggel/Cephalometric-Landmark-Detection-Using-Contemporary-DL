@@ -91,7 +91,7 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
         batch: tuple[torch.Tensor, torch.Tensor],
         batch_idx: int
     ):
-        loss, _, _, _ = self.step(batch)
+        loss, _, _, _ = self.step(batch, with_mm_error=True)
 
         self.log(
             'train_loss',
@@ -130,12 +130,10 @@ class DirectPointPredictionBasedLandmarkDetection(L.LightningModule):
         ) = self.step(batch, with_mm_error=True)
 
         for (id, point_id) in enumerate(self.point_ids):
-            self.log(f'{point_id}_mm_error', mm_error[id].mean())
-
-        mm_error = mm_error.mean()
+            self.log(f'{point_id}_mm_error', mm_error.mean(dim=0)[id].mean())
 
         self.log('test_loss', loss, prog_bar=True)
-        self.log('test_mm_error', mm_error, prog_bar=True)
+        self.log('test_mm_error', mm_error.mean(), prog_bar=True)
 
         self.log(
             'percent_under_1mm',
