@@ -135,7 +135,7 @@ class ModelTypes(Enum):
                 resized_image_size=(384, 384),
                 model=lambda *args, **kwargs: DirectPointPredictionBasedLandmarkDetection(
                     model=ConvNextV2(
-                        model_name='facebook/convnextv2-tiny-22k-384',
+                        model_name='facebook/convnextv2-base-22k-384',
                     ),
                     *args, **kwargs,
                 ),
