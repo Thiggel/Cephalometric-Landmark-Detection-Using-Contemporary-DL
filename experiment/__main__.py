@@ -68,6 +68,9 @@ def run(args: dict, seed: int = 42) -> dict:
         flip_augmentations=args.flip_augmentations,
     )
 
+    print(datamodule[0])
+    exit()
+
     model_args = {
         'model_name': args.model_name,
         'point_ids': datamodule.dataset.point_ids,
