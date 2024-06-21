@@ -11,6 +11,6 @@ conda activate cephalometry
 
 ```
 
-## Reproducing the Results
+## Reproducing the Experiments
 
 All experiments can be repeated using the job scripts provided in the `jobs` directory. The scripts are named according to the experiment they run. For example, to run the Segformer on the benchmark dataset, either execute `sbatch jobs/Segformer/SegformerSmall-BenchmarkDataset.job` or run the contents of the latter file in the terminal.
