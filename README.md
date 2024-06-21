@@ -1,4 +1,4 @@
-# Cephalometry
+# An Investigation into Cephalometric Landmark Detection using Contemporary Deep Learning Methods
 
 ## Install and Activate Conda Environment
 
